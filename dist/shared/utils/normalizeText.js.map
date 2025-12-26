@@ -1,0 +1,1 @@
+{"version":3,"file":"normalizeText.js","sourceRoot":"","sources":["../../../src/shared/utils/normalizeText.ts"],"names":[],"mappings":"AAAA,MAAM,UAAU,aAAa,CAAC,KAAa;IACvC,OAAO,KAAK;SACT,SAAS,CAAC,KAAK,CAAC,CAAiB,iBAAiB;SAClD,OAAO,CAAC,kBAAkB,EAAE,EAAE,CAAC;SAC/B,WAAW,EAAE;SACb,IAAI,EAAE;SACN,OAAO,CAAC,MAAM,EAAE,GAAG,CAAC,CAAA;AACzB,CAAC"}

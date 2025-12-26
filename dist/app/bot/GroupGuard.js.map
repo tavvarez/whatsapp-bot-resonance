@@ -1,0 +1,1 @@
+{"version":3,"file":"GroupGuard.js","sourceRoot":"","sources":["../../../src/app/bot/GroupGuard.ts"],"names":[],"mappings":"AAAA,MAAM,OAAO,UAAU;IACnB,YAAoB,cAAsB;QAAtB,mBAAc,GAAd,cAAc,CAAQ;IAAG,CAAC;IAE9C,SAAS,CAAC,MAAc;QACtB,OAAO,MAAM,KAAK,IAAI,CAAC,cAAc,CAAA;IACvC,CAAC;CACF"}

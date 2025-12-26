@@ -1,0 +1,9 @@
+export function normalizeText(value: string): string {
+    return value
+      .normalize('NFD')                 // remove acentos
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+  }
+  
