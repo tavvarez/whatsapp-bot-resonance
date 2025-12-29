@@ -6,6 +6,7 @@ import makeWASocket, {
   type AnyMessageContent
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
+import qrcode from 'qrcode-terminal'
 
 export class BaileysClient {
   private socket: ReturnType<typeof makeWASocket> | null = null
@@ -22,9 +23,15 @@ export class BaileysClient {
 
     this.socket.ev.on('creds.update', saveCreds)
 
-    this.socket.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    this.socket.ev.on('connection.update', ({ connection, lastDisconnect,qr }) => {
       if (connection === 'open') {
         console.log('✅ WhatsApp conectado e pronto para receber mensagens')
+      }
+
+      if (qr) {
+        console.clear()
+        console.log('📲 Escaneie o QR Code abaixo com o WhatsApp:')
+        qrcode.generate(qr, { small: true })
       }
 
       if (
