@@ -1,18 +1,6 @@
 {
   "cookies": [
     {
-      "name": "cf_chl_rc_ni",
-      "value": "1",
-      "domain": "rubinot.com.br",
-      "path": "/",
-      "expires": 1767036577,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None",
-      "partitionKey": "https://rubinot.com.br",
-      "_crHasCrossSiteAncestor": false
-    },
-    {
       "name": "PHPSESSID",
       "value": "v941uoug9uap23t0hh45pjcu9m",
       "domain": "rubinot.com.br",
@@ -27,20 +15,10 @@
       "value": "fb.2.1767032981136.249703969505177204",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1774808981,
+      "expires": 1774817529,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
-    },
-    {
-      "name": "_rdt_uuid",
-      "value": "1767032981153.588fe42a-4c53-4557-a8b4-11229c6f969e",
-      "domain": ".rubinot.com.br",
-      "path": "/",
-      "expires": 1774808981,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "Strict"
     },
     {
       "name": "_gcl_au",
@@ -63,21 +41,11 @@
       "sameSite": "Lax"
     },
     {
-      "name": "test_cookie",
-      "value": "CheckForPermission",
-      "domain": ".doubleclick.net",
-      "path": "/",
-      "expires": 1767033881.42452,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None"
-    },
-    {
       "name": "_ttp",
       "value": "37WyB0x3ECeWPVgU3ANv8eCnVoh",
       "domain": ".tiktok.com",
       "path": "/",
-      "expires": 1800728981.619972,
+      "expires": 1800737529.906621,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
@@ -87,7 +55,7 @@
       "value": "1",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1800728981,
+      "expires": 1800737529,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -97,37 +65,69 @@
       "value": "01KDNNZ27891KSV5YRJADGQ85M_.tt.2",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1800728981,
+      "expires": 1800737529,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
-      "name": "_ga_JD5ND9M441",
-      "value": "GS2.1.s1767032981$o1$g0$t1767032986$j55$l0$h1936325917",
+      "name": "cf_chl_rc_ni",
+      "value": "1",
+      "domain": "rubinot.com.br",
+      "path": "/",
+      "expires": 1767045119,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "partitionKey": "https://rubinot.com.br",
+      "_crHasCrossSiteAncestor": false
+    },
+    {
+      "name": "IDE",
+      "value": "AHWqTUlYLSIagT-a4NVuy4tVThsTJn7T3OdQjHNZgvnDxfdDhaAqTAgML_up3dQH",
+      "domain": ".doubleclick.net",
+      "path": "/",
+      "expires": 1801601525.196839,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_rdt_uuid",
+      "value": "1767032981153.588fe42a-4c53-4557-a8b4-11229c6f969e",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1801592986.350246,
+      "expires": 1774817529,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "_ga_JD5ND9M441",
+      "value": "GS2.1.s1767041523$o2$g1$t1767041530$j53$l0$h1597005596$d2X39UcVBj41-wSxNqaD8Z5jv2LVjcJjwUA",
+      "domain": ".rubinot.com.br",
+      "path": "/",
+      "expires": 1801601530.064414,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "ttcsid",
-      "value": "1767032981739::S7_kM88TwFcVtMoTW14d.1.1767032991753.0",
+      "value": "1767041523967::n9TFVCJxndol958YGBqJ.2.1767041530185.0",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1800728991,
+      "expires": 1800737530,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "ttcsid_D2RH9SBC77UEK08KPNIG",
-      "value": "1767032981738::5hxYe5DUJUkBTbtjwWgI.1.1767032991755.1",
+      "value": "1767041523966::AXdVyVB5hFhQelg6P84e.2.1767041530186.1",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1800728991,
+      "expires": 1800737530,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -138,12 +138,16 @@
       "origin": "https://rubinot.com.br",
       "localStorage": [
         {
-          "name": "topicsLastReferenceTime",
-          "value": "1767032981147"
+          "name": "menus",
+          "value": "shops=0&"
         },
         {
           "name": "_gcl_ls",
           "value": "{\"schema\":\"gcl\",\"version\":1,\"gcl_ctr\":{\"value\":{\"value\":0,\"timeouts\":0,\"creationTimeMs\":1767032981197},\"expires\":1774808981197}}"
+        },
+        {
+          "name": "topicsLastReferenceTime",
+          "value": "1767041529857"
         }
       ]
     },
