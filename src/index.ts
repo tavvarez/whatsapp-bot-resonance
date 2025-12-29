@@ -7,6 +7,8 @@ import { FindCharacterCommand } from './app/commands/FindCharacterCommand.js'
 import { CommandParser } from './app/commands/CommandParser.js'
 import { GroupGuard } from './app/bot/GroupGuard.js'
 import { MessageListener } from './app/bot/MessageListener.js'
+import { NotifyDeathsJob } from './app/jobs/NotifyDeathsJob.js'
+import { SupabaseDeathRepository } from './infra/database/SupabaseDeathRepository.js'
 
 const whatsapp = new BaileysClient()
 await whatsapp.connect()
@@ -27,6 +29,11 @@ whatsapp.onMessage((msg) => {
       console.log('📌 GROUP ID:', jid)
     }
   })
+
+const deathRepo = new SupabaseDeathRepository()
+const notifyJob = new NotifyDeathsJob(deathRepo, whatsapp)
+
+await notifyJob.execute(process.env.GROUP_ID_NOTIFY!)
 
 
 listener.listen()
