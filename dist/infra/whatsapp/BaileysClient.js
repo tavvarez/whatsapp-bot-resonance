@@ -1,5 +1,6 @@
 import makeWASocket, { DisconnectReason, useMultiFileAuthState, proto } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
+import qrcode from 'qrcode-terminal';
 export class BaileysClient {
     constructor() {
         this.socket = null;
@@ -13,9 +14,14 @@ export class BaileysClient {
             emitOwnEvents: false
         });
         this.socket.ev.on('creds.update', saveCreds);
-        this.socket.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+        this.socket.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
             if (connection === 'open') {
                 console.log('✅ WhatsApp conectado e pronto para receber mensagens');
+            }
+            if (qr) {
+                console.clear();
+                console.log('📲 Escaneie o QR Code abaixo com o WhatsApp:');
+                qrcode.generate(qr, { small: true });
             }
             if (connection === 'close' &&
                 lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
