@@ -26,16 +26,22 @@ export class SupabaseDeathRepository implements DeathRepository {
   async save(event: DeathEvent): Promise<void> {
     const { error } = await this.client
       .from('death_events')
-      .insert({
-        world: event.world,
-        guild: event.guild,
-        player_name: event.playerName,
-        level: event.level,
-        occurred_at: event.occurredAt.toISOString(),
-        raw_text: event.rawText,
-        hash: event.hash
-      })
-
+      .upsert(
+        {
+          world: event.world,
+          guild: event.guild,
+          player_name: event.playerName,
+          level: event.level,
+          occurred_at: event.occurredAt.toISOString(),
+          raw_text: event.rawText,
+          hash: event.hash
+        },
+        {
+          onConflict: 'hash',      // Se hash já existe, ignora
+          ignoreDuplicates: true   // Não faz update, só ignora
+        }
+      )
+  
     if (error) {
       console.error('Erro ao salvar death_event:', error)
       throw error

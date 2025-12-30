@@ -11,6 +11,8 @@ import { NotifyDeathsJob } from './app/jobs/NotifyDeathsJob.js'
 import { FetchLatestDeathsJob } from './app/jobs/FetchLatestDeathsJob.js'
 import { SupabaseDeathRepository } from './infra/database/SupabaseDeathRepository.js'
 import { RubinotDeathScraper } from './infra/scraper/RubinotDeathScraper.js'
+import { log, logError } from './shared/utils/logger.js'
+
 
 const whatsapp = new BaileysClient()
 await whatsapp.connect()
@@ -41,7 +43,7 @@ const notifyJob = new NotifyDeathsJob(deathRepo, whatsapp)
 // Função que executa os jobs
 async function runDeathJobs() {
   try {
-    console.log('🔄 Iniciando ciclo de jobs...')
+    log('Iniciando ciclo de jobs...')
     
     // 1. Busca novas mortes do site
     await fetchJob.execute({
@@ -52,9 +54,9 @@ async function runDeathJobs() {
     // 2. Notifica mortes pendentes
     await notifyJob.execute(process.env.GROUP_ID_NOTIFY!)
     
-    console.log('✅ Ciclo finalizado')
+    log(`Ciclo finalizado`)
   } catch (error) {
-    console.error('❌ Erro no ciclo de jobs:', error)
+    logError('Erro no ciclo de jobs:', error)
   }
 }
 
@@ -64,7 +66,7 @@ await runDeathJobs()
 // Executa a cada 5 minutos (300000ms)
 const INTERVAL_MS = 5 * 60 * 1000
 setInterval(runDeathJobs, INTERVAL_MS)
-console.log(`⏰ Jobs agendados para rodar a cada ${INTERVAL_MS / 60000} minutos`)
+log(`Jobs agendados para rodar a cada ${INTERVAL_MS / 60000} minutos`)
 
 // Inicia o listener de comandos
 listener.listen()
