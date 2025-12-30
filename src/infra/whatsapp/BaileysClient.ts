@@ -23,17 +23,26 @@ export class BaileysClient {
 
     this.socket.ev.on('creds.update', saveCreds)
 
-    this.socket.ev.on('connection.update', ({ connection, lastDisconnect,qr }) => {
+    this.socket.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
       if (connection === 'open') {
         console.log('✅ WhatsApp conectado e pronto para receber mensagens')
       }
-
+    
       if (qr) {
-        console.clear()
-        console.log('📲 Escaneie o QR Code abaixo com o WhatsApp:')
+        console.log('═'.repeat(50))
+        console.log('📲 ESCANEIE O QR CODE')
+        console.log('═'.repeat(50))
+        
+        // Mostra o QR no terminal (pode não funcionar em cloud)
         qrcode.generate(qr, { small: true })
+        
+        // Mostra link alternativo para visualizar o QR
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`
+        console.log('\n🔗 Ou acesse este link para ver o QR Code:')
+        console.log(qrUrl)
+        console.log('═'.repeat(50))
       }
-
+    
       if (
         connection === 'close' &&
         (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut
