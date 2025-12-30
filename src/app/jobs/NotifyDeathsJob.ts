@@ -1,16 +1,17 @@
 import type { DeathRepository } from '../../domain/repositories/DeathRepository.js'
-import type { BaileysClient } from '../../infra/whatsapp/BaileysClient.js'
+import type { MessageSender } from '../../domain/services/MessageSender.js'
 import { DeathMessageFormatter } from '../../domain/services/DeathMessageFormatter.js'
+import { config } from '../../config/index.js'
 import { log } from '../../shared/utils/logger.js'
 
 export class NotifyDeathsJob {
   constructor(
     private readonly deathRepository: DeathRepository,
-    private readonly whatsapp: BaileysClient
+    private readonly messageSender: MessageSender
   ) {}
 
-  async execute(to: string, limit = 50): Promise<void> {
-    const deaths = await this.deathRepository.findUnnotified(limit)
+  async execute(to: string): Promise<void> {
+    const deaths = await this.deathRepository.findUnnotified(config.jobs.notifyLimit)
 
     if (deaths.length === 0) {
       log('📭 Nenhuma morte pendente para notificar')
@@ -19,8 +20,7 @@ export class NotifyDeathsJob {
 
     log(`📨 Notificando ${deaths.length} mortes...`)
 
-    // Agrupa em batches de 10 para não fazer mensagens muito longas
-    const batchSize = 10
+    const batchSize = config.jobs.notifyBatchSize
     const notifiedIds: string[] = []
 
     for (let i = 0; i < deaths.length; i += batchSize) {
@@ -28,7 +28,7 @@ export class NotifyDeathsJob {
       
       const message = DeathMessageFormatter.formatBatch(batch)
       
-      await this.whatsapp.sendMessage(to, { text: message })
+      await this.messageSender.sendMessage(to, { text: message })
 
       // Coleta IDs para marcar como notificado
       for (const death of batch) {
@@ -37,7 +37,7 @@ export class NotifyDeathsJob {
 
       // Delay entre mensagens para não parecer spam
       if (i + batchSize < deaths.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve => setTimeout(resolve, config.jobs.notifyBatchDelayMs))
       }
     }
 

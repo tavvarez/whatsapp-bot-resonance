@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { DeathRepository } from '../../domain/repositories/DeathRepository.js'
 import type { DeathEvent } from '../../domain/entities/DeathEvent.js'
+import { DatabaseError } from '../../shared/errors/index.js'
 
 export class SupabaseDeathRepository implements DeathRepository {
   private client = createClient(
@@ -16,8 +17,7 @@ export class SupabaseDeathRepository implements DeathRepository {
       .maybeSingle()
 
     if (error) {
-      console.error('Erro ao verificar hash:', error)
-      throw error
+      throw new DatabaseError('Erro ao verificar hash no banco de dados', error)
     }
 
     return !!data
@@ -43,8 +43,7 @@ export class SupabaseDeathRepository implements DeathRepository {
       )
   
     if (error) {
-      console.error('Erro ao salvar death_event:', error)
-      throw error
+      throw new DatabaseError('Erro ao salvar evento de morte', error)
     }
   }
 
@@ -57,8 +56,7 @@ export class SupabaseDeathRepository implements DeathRepository {
       .limit(limit)
   
     if (error) {
-      console.error('Erro ao buscar mortes não notificadas:', error)
-      throw error
+      throw new DatabaseError('Erro ao buscar mortes não notificadas', error)
     }
   
     if (!data) return []
@@ -94,8 +92,7 @@ export class SupabaseDeathRepository implements DeathRepository {
       .in('id', ids)
 
     if (error) {
-      console.error('Erro ao marcar como notificado:', error)
-      throw error
+      throw new DatabaseError('Erro ao marcar mortes como notificadas', error)
     }
   }
 

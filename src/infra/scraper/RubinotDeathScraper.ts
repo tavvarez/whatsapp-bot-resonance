@@ -3,22 +3,14 @@ import stealth from 'puppeteer-extra-plugin-stealth'
 import crypto from 'node:crypto'
 import type { Page, BrowserContext } from 'playwright'
 import type { DeathEvent } from '../../domain/entities/DeathEvent.js'
+import type { DeathScraper, FetchDeathsParams, FetchDeathsOptions } from '../../domain/scrapers/DeathScraper.js'
 import { log } from '../../shared/utils/logger.js'
+import { CloudflareBlockedError, ParseError, ScraperError } from '../../shared/errors/index.js'
 
 // Aplica o plugin stealth para evitar detecção
 chromium.use(stealth())
 
-interface FetchDeathsParams {
-  world: string
-  guild: string
-}
-
-interface FetchOptions {
-  maxRetries?: number
-  retryDelayMs?: number
-}
-
-export class RubinotDeathScraper {
+export class RubinotDeathScraper implements DeathScraper {
   private async humanDelay(page: Page, min = 500, max = 1500): Promise<void> {
     const delay = Math.random() * (max - min) + min
     await page.waitForTimeout(delay)
@@ -74,7 +66,7 @@ export class RubinotDeathScraper {
       const passed = await this.waitForCloudflareToPass(page, 45000)
 
       if (!passed) {
-        throw new Error('CLOUDFLARE_BLOCKED')
+        throw new CloudflareBlockedError()
       }
     }
 
@@ -136,7 +128,7 @@ export class RubinotDeathScraper {
 
   async fetch(
     { world, guild }: FetchDeathsParams,
-    options: FetchOptions = {}
+    options: FetchDeathsOptions = {}
   ): Promise<DeathEvent[]> {
     const { maxRetries = 5, retryDelayMs = 10000 } = options
   
@@ -187,19 +179,18 @@ export class RubinotDeathScraper {
           log(`✅ Sucesso! ${deaths.length} mortes encontradas.`)
           return deaths
         } catch (error) {
-          const isCloudflareError =
-            error instanceof Error && error.message === 'CLOUDFLARE_BLOCKED'
-  
+          const isCloudflareError = error instanceof CloudflareBlockedError
+
           console.warn(
             `⚠️ Tentativa ${attempt} falhou:`,
             isCloudflareError ? 'Cloudflare bloqueou' : error
           )
-  
+
           if (attempt === maxRetries) {
             if (isCloudflareError) {
-              throw new Error('🛑 Cloudflare bloqueou todas as tentativas.')
+              throw error
             }
-            throw error
+            throw new ScraperError('Todas as tentativas de scraping falharam', error)
           }
   
           const delay = retryDelayMs * attempt
@@ -208,7 +199,7 @@ export class RubinotDeathScraper {
         }
       }
   
-      throw new Error('Todas as tentativas falharam')
+      throw new ScraperError('Todas as tentativas falharam')
     } finally {
       await browser.close()
     }
@@ -222,7 +213,7 @@ export class RubinotDeathScraper {
     )
   
     if (!match) {
-      throw new Error(`Formato inesperado: ${normalized}`)
+      throw new ParseError(`Formato inesperado de morte`, normalized)
     }
   
     const dateStr = match[1]!
