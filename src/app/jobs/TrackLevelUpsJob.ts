@@ -2,6 +2,7 @@ import type { HuntedRepository } from '../../domain/repositories/HuntedRepositor
 import type { GuildScraper, GuildMember } from '../../domain/scrapers/GuildScraper.js'
 import type { MessageSender } from '../../domain/services/MessageSender.js'
 import { normalizeText } from '../../shared/utils/normalizeText.js'
+import { config } from '../../config/index.js'
 import { log } from '../../shared/utils/logger.js'
 
 interface LevelUpEvent {
@@ -26,8 +27,11 @@ export class TrackLevelUpsJob {
   async execute({ guild, notifyTo }: TrackLevelUpsJobParams): Promise<void> {
     log(`📊 Verificando level ups da guild: ${guild}`)
 
-    // 1. Busca membros atuais da guild no site
-    const currentMembers = await this.guildScraper.fetchMembers(guild)
+    // 1. Busca membros atuais da guild no site (com retry)
+    const currentMembers = await this.guildScraper.fetchMembers(guild, {
+      maxRetries: config.scraper.maxRetries,
+      retryDelayMs: config.scraper.retryDelayMs
+    })
 
     if (currentMembers.length === 0) {
       log('⚠️ Nenhum membro encontrado na guild')

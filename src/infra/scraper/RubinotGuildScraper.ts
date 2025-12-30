@@ -1,7 +1,7 @@
 import { chromium } from 'playwright-extra'
 import stealth from 'puppeteer-extra-plugin-stealth'
-import type { Page } from 'playwright'
-import type { GuildScraper, GuildMember } from '../../domain/scrapers/GuildScraper.js'
+import type { Page, BrowserContext } from 'playwright'
+import type { GuildScraper, GuildMember, FetchMembersOptions } from '../../domain/scrapers/GuildScraper.js'
 import { log } from '../../shared/utils/logger.js'
 import { CloudflareBlockedError, ScraperError } from '../../shared/errors/index.js'
 
@@ -16,18 +16,24 @@ export class RubinotGuildScraper implements GuildScraper {
   }
 
   private async detectCloudflare(page: Page): Promise<boolean> {
-    const indicators = [
-      'cf-browser-verification',
-      'cf_chl_opt',
-      'challenge-running',
-      'Just a moment...',
-      'Verify you are human'
-    ]
+    try {
+      await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {})
+      
+      const indicators = [
+        'cf-browser-verification',
+        'cf_chl_opt',
+        'challenge-running',
+        'Just a moment...',
+        'Verify you are human'
+      ]
 
-    const content = await page.content()
-    const title = await page.title()
+      const content = await page.content()
+      const title = await page.title()
 
-    return indicators.some(i => content.includes(i) || title.includes(i))
+      return indicators.some(i => content.includes(i) || title.includes(i))
+    } catch {
+      return true
+    }
   }
 
   private async waitForCloudflare(page: Page, timeoutMs = 30000): Promise<boolean> {
@@ -44,8 +50,69 @@ export class RubinotGuildScraper implements GuildScraper {
     return false
   }
 
-  async fetchMembers(guildName: string): Promise<GuildMember[]> {
+  private async doFetch(context: BrowserContext, guildName: string): Promise<GuildMember[]> {
     const url = `${this.baseUrl}/?subtopic=guilds&page=view&GuildName=${encodeURIComponent(guildName)}`
+    const page = await context.newPage()
+
+    try {
+      await page.goto(url, {
+        waitUntil: 'networkidle',
+        timeout: 60000
+      })
+
+      await this.humanDelay(page, 1000, 2000)
+
+      if (await this.detectCloudflare(page)) {
+        log('🛡️ Cloudflare detectado (guild)...')
+        const passed = await this.waitForCloudflare(page)
+        if (!passed) {
+          throw new CloudflareBlockedError()
+        }
+      }
+
+      await this.humanDelay(page)
+
+      await page.waitForSelector('table.TableContent', { timeout: 30000 })
+
+      const members = await page.$$eval('table.TableContent tr', (rows) => {
+        const result: Array<{ playerName: string; level: number; vocation: string; isOnline: boolean }> = []
+
+        for (const row of rows) {
+          const cells = row.querySelectorAll('td')
+          if (cells.length < 6) continue
+
+          if (row.classList.contains('LabelH')) continue
+
+          const nameCell = cells[1]
+          const nameLink = nameCell?.querySelector('a')
+          if (!nameLink) continue
+
+          const playerName = nameLink.textContent?.trim() ?? ''
+          if (!playerName) continue
+
+          const vocation = cells[2]?.textContent?.trim() ?? ''
+
+          const levelText = cells[3]?.textContent?.trim() ?? '0'
+          const level = parseInt(levelText, 10)
+          if (isNaN(level)) continue
+
+          const statusCell = cells[5]
+          const isOnline = statusCell?.textContent?.toLowerCase().includes('online') ?? false
+
+          result.push({ playerName, level, vocation, isOnline })
+        }
+
+        return result
+      })
+
+      return members
+    } finally {
+      await page.close()
+    }
+  }
+
+  async fetchMembers(guildName: string, options: FetchMembersOptions = {}): Promise<GuildMember[]> {
+    const { maxRetries = 5, retryDelayMs = 10000 } = options
     
     log(`🔍 Buscando membros da guild: ${guildName}`)
 
@@ -59,17 +126,6 @@ export class RubinotGuildScraper implements GuildScraper {
       ]
     })
 
-    // Verifica se tem sessão salva
-    const fs = await import('node:fs/promises')
-    let hasStorageState = false
-
-    try {
-      await fs.access('rubinot-state.json')
-      hasStorageState = true
-    } catch {
-      // Sem sessão salva
-    }
-
     const contextOptions = {
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },
@@ -77,82 +133,41 @@ export class RubinotGuildScraper implements GuildScraper {
       timezoneId: 'America/Sao_Paulo'
     }
 
-    const context = hasStorageState
-      ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
-      : await browser.newContext(contextOptions)
-
-    const page = await context.newPage()
+    const context = await browser.newContext(contextOptions)
 
     try {
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000
-      })
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          log(`🔄 Tentativa ${attempt}/${maxRetries} (guild)...`)
 
-      if (await this.detectCloudflare(page)) {
-        log('🛡️ Cloudflare detectado (guild)...')
-        const passed = await this.waitForCloudflare(page)
-        if (!passed) {
-          throw new CloudflareBlockedError()
+          const members = await this.doFetch(context, guildName)
+
+          log(`✅ Sucesso! ${members.length} membros encontrados.`)
+          return members
+        } catch (error) {
+          const isCloudflareError = error instanceof CloudflareBlockedError
+
+          console.warn(
+            `⚠️ Tentativa ${attempt} falhou (guild):`,
+            isCloudflareError ? 'Cloudflare bloqueou' : error
+          )
+
+          if (attempt === maxRetries) {
+            if (isCloudflareError) {
+              throw error
+            }
+            throw new ScraperError('Todas as tentativas de scraping da guild falharam', error)
+          }
+
+          const delay = retryDelayMs * attempt
+          log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
 
-      await this.humanDelay(page)
-
-      // Aguarda a tabela de membros
-      await page.waitForSelector('table.TableContent', { timeout: 30000 })
-
-      // Extrai os membros da tabela
-      const members = await page.$$eval('table.TableContent tr', (rows) => {
-        const result: Array<{ playerName: string; level: number; vocation: string; isOnline: boolean }> = []
-
-        for (const row of rows) {
-          const cells = row.querySelectorAll('td')
-          if (cells.length < 6) continue
-
-          // Ignora header
-          if (row.classList.contains('LabelH')) continue
-
-          // Coluna 1: Name (com link)
-          const nameCell = cells[1]
-          const nameLink = nameCell?.querySelector('a')
-          if (!nameLink) continue
-
-          const playerName = nameLink.textContent?.trim() ?? ''
-          if (!playerName) continue
-
-          // Coluna 2: Vocation
-          const vocation = cells[2]?.textContent?.trim() ?? ''
-
-          // Coluna 3: Level
-          const levelText = cells[3]?.textContent?.trim() ?? '0'
-          const level = parseInt(levelText, 10)
-          if (isNaN(level)) continue
-
-          // Coluna 5: Status (Online/Offline)
-          const statusCell = cells[5]
-          const isOnline = statusCell?.textContent?.toLowerCase().includes('online') ?? false
-
-          result.push({ playerName, level, vocation, isOnline })
-        }
-
-        return result
-      })
-
-      // Salva estado para reutilizar cookies
-      await context.storageState({ path: 'rubinot-state.json' })
-
-      log(`✅ ${members.length} membros encontrados na guild ${guildName}`)
-
-      return members
-    } catch (error) {
-      if (error instanceof CloudflareBlockedError) {
-        throw error
-      }
-      throw new ScraperError('Erro ao buscar membros da guild', error)
+      throw new ScraperError('Todas as tentativas falharam')
     } finally {
       await browser.close()
     }
   }
 }
-

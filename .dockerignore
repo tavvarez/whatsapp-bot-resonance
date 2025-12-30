@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env*
+auth/
+rubinot-state.json
+.git/
+.gitignore
+*.md
+
