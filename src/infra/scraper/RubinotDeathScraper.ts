@@ -152,27 +152,30 @@ export class RubinotDeathScraper {
   
     // Verifica se o arquivo de estado existe
     const fs = await import('node:fs/promises')
-    let storageState: string | undefined
+    let hasStorageState = false
     
     try {
       await fs.access('rubinot-state.json')
-      storageState = 'rubinot-state.json'
+      hasStorageState = true
       log('📂 Usando sessão salva do Rubinot')
     } catch {
       log('📂 Nenhuma sessão salva, iniciando nova')
-      storageState = undefined
     }
   
-    const context = await browser.newContext({
-      storageState,
+    // Cria contexto COM ou SEM storageState
+    const contextOptions = {
       userAgent:
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
       geolocation: { latitude: -23.5505, longitude: -46.6333 },
-      permissions: ['geolocation']
-    })
+      permissions: ['geolocation']  // Removido "as const"
+    }
+  
+    const context = hasStorageState
+      ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
+      : await browser.newContext(contextOptions)
   
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -194,9 +197,7 @@ export class RubinotDeathScraper {
   
           if (attempt === maxRetries) {
             if (isCloudflareError) {
-              throw new Error(
-                '🛑 Cloudflare bloqueou todas as tentativas.'
-              )
+              throw new Error('🛑 Cloudflare bloqueou todas as tentativas.')
             }
             throw error
           }
