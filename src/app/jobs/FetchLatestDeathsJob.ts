@@ -1,5 +1,7 @@
 import type { DeathRepository } from '../../domain/repositories/DeathRepository.js'
-import { RubinotDeathScraper } from '../../infra/scraper/RubinotDeathScraper.js'
+import type { DeathScraper } from '../../domain/scrapers/DeathScraper.js'
+import { config } from '../../config/index.js'
+import { log } from '../../shared/utils/logger.js'
 
 interface FetchLatestDeathsJobParams {
   world: string
@@ -9,26 +11,34 @@ interface FetchLatestDeathsJobParams {
 export class FetchLatestDeathsJob {
   constructor(
     private readonly deathRepository: DeathRepository,
-    private readonly scraper: RubinotDeathScraper
+    private readonly scraper: DeathScraper
   ) {}
 
   async execute({ world, guild }: FetchLatestDeathsJobParams): Promise<void> {
-    console.log('🔎 Buscando mortes...', { world, guild })
-    const deaths = await this.scraper.fetch({ world, guild })
-    console.log(`🧾 ${deaths.length} mortes encontradas`)
+    log(`🔎 Buscando mortes... world=${world}, guild=${guild}`)
+    
+    const deaths = await this.scraper.fetch(
+      { world, guild },
+      { 
+        maxRetries: config.scraper.maxRetries, 
+        retryDelayMs: config.scraper.retryDelayMs 
+      }
+    )
+    
+    log(`🧾 ${deaths.length} mortes encontradas`)
 
     let consecutiveExisting = 0
-    const threshold = 2 // Se 2 primeiras já existem, para
+    const threshold = config.jobs.duplicateThreshold
 
     for (const death of deaths) {
       const exists = await this.deathRepository.existsByHash(death.hash)
       
       if (exists) {
         consecutiveExisting++
-        console.log(`⏭️ Já existe (${consecutiveExisting}/${threshold}):`, death.playerName)
+        log(`⏭️ Já existe (${consecutiveExisting}/${threshold}): ${death.playerName}`)
         
         if (consecutiveExisting >= threshold) {
-          console.log('🛑 Mortes já sincronizadas, pulando restante...')
+          log('🛑 Mortes já sincronizadas, pulando restante...')
           break
         }
         continue
@@ -37,10 +47,10 @@ export class FetchLatestDeathsJob {
       // Reseta contador se encontrar uma morte nova
       consecutiveExisting = 0
       
-      console.log('💾 Salvando:', death.playerName)
+      log(`💾 Salvando: ${death.playerName}`)
       await this.deathRepository.save(death)
     }
     
-    console.log('✅ Job finalizado')
+    log('✅ Job finalizado')
   }
 }

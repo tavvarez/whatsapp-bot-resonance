@@ -1,13 +1,14 @@
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
-  type WAMessage,
-  type AnyMessageContent
+  type WAMessage
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import qrcode from 'qrcode-terminal'
+import type { MessageSender, MessageContent } from '../../domain/services/MessageSender.js'
+import { WhatsAppError } from '../../shared/errors/index.js'
 
-export class BaileysClient {
+export class BaileysClient implements MessageSender {
   private socket: ReturnType<typeof makeWASocket> | null = null
 
   async connect(): Promise<void> {
@@ -47,7 +48,7 @@ export class BaileysClient {
           const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode
           
           if (statusCode === DisconnectReason.loggedOut) {
-            reject(new Error('WhatsApp deslogado. Delete a pasta auth/ e tente novamente.'))
+            reject(new WhatsAppError('WhatsApp deslogado. Delete a pasta auth/ e tente novamente.'))
           } else {
             console.log('🔄 Reconectando ao WhatsApp...')
             this.connect().then(resolve).catch(reject)
@@ -58,7 +59,7 @@ export class BaileysClient {
   }
 
   onMessage(callback: (message: WAMessage) => void) {
-    if (!this.socket) throw new Error('Socket not initialized')
+    if (!this.socket) throw new WhatsAppError('Socket não inicializado. Chame connect() primeiro.')
 
     this.socket.ev.on('messages.upsert', ({ messages, type }) => {
       if (type !== 'notify') return
@@ -70,8 +71,13 @@ export class BaileysClient {
     })
   }
 
-  async sendMessage(chatId: string, content: AnyMessageContent) {
-    if (!this.socket) throw new Error('WhatsApp not connected')
-    await this.socket.sendMessage(chatId, content)
+  async sendMessage(chatId: string, content: MessageContent): Promise<void> {
+    if (!this.socket) throw new WhatsAppError('WhatsApp não conectado')
+    
+    try {
+      await this.socket.sendMessage(chatId, content)
+    } catch (error) {
+      throw new WhatsAppError('Falha ao enviar mensagem', error)
+    }
   }
 }

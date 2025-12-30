@@ -6,14 +6,17 @@ WORKDIR /app
 # Copia package.json e package-lock.json
 COPY package*.json ./
 
-# Instala dependências do Node
-RUN npm ci --omit=dev
+# Instala TODAS as dependências (incluindo devDeps para build)
+RUN npm ci
 
 # Copia o código fonte
 COPY . .
 
 # Compila TypeScript
 RUN npm run build
+
+# Remove devDependencies após build (opcional, reduz tamanho)
+RUN npm prune --omit=dev
 
 # Inicia a aplicação
 CMD ["npm", "start"]

@@ -15,7 +15,7 @@
       "value": "fb.2.1767032981136.249703969505177204",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1774836499,
+      "expires": 1774873625,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -81,28 +81,6 @@
       "sameSite": "None"
     },
     {
-      "name": "cf_chl_rc_ni",
-      "value": "21",
-      "domain": "rubinot.com.br",
-      "path": "/",
-      "expires": 1767064074,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None",
-      "partitionKey": "https://rubinot.com.br",
-      "_crHasCrossSiteAncestor": false
-    },
-    {
-      "name": "_rdt_uuid",
-      "value": "1767032981153.588fe42a-4c53-4557-a8b4-11229c6f969e",
-      "domain": ".rubinot.com.br",
-      "path": "/",
-      "expires": 1774836499,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "Strict"
-    },
-    {
       "name": "ttcsid_D2RH9SBC77UEK08KPNIG",
       "value": "1767056246417::F2a-AWgrOkyKcx3EqGxw.4.1767060500579.1",
       "domain": ".rubinot.com.br",
@@ -123,11 +101,33 @@
       "sameSite": "Lax"
     },
     {
-      "name": "_ga_JD5ND9M441",
-      "value": "GS2.1.s1767056245$o4$g1$t1767060500$j50$l0$h1589596474$d0vJG0ngqCLU4wGiWO9FQJ3ZkBXFjuYYDQw",
+      "name": "cf_chl_rc_ni",
+      "value": "1",
+      "domain": "rubinot.com.br",
+      "path": "/",
+      "expires": 1767101221,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "partitionKey": "https://rubinot.com.br",
+      "_crHasCrossSiteAncestor": false
+    },
+    {
+      "name": "_rdt_uuid",
+      "value": "1767032981153.588fe42a-4c53-4557-a8b4-11229c6f969e",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1801620500.584172,
+      "expires": 1774873624,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Strict"
+    },
+    {
+      "name": "_ga_JD5ND9M441",
+      "value": "GS2.1.s1767097625$o5$g0$t1767097625$j60$l0$h1268527387",
+      "domain": ".rubinot.com.br",
+      "path": "/",
+      "expires": 1801657625.241373,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -155,7 +155,7 @@
         },
         {
           "name": "topicsLastReferenceTime",
-          "value": "1767060499927"
+          "value": "1767097625106"
         }
       ]
     },
