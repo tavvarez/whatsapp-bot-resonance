@@ -23,7 +23,7 @@ export class DeathMessageFormatter {
   static formatBatch(events: DeathEvent[]): string {
     if (events.length === 0) return ''
 
-    const header = `🔴 *HUNTED DEATHS* (${events.length})\n${'─'.repeat(25)}\n`
+    const header = `🔴 *HUNTED DEATHS* (${events.length})\n${'─'.repeat(12)}\n`
 
     const lines = events.map(event => {
       const time = event.occurredAt.toLocaleTimeString('pt-BR', {

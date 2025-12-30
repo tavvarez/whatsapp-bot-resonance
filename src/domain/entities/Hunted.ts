@@ -15,9 +15,12 @@ export interface Hunted {
   guild: string
   /** Se o tracking está ativo */
   isActive: boolean
+  /** Total de levels ganhos hoje */
+  levelGainToday: number
+  /** Data do último level up (para resetar contador diário) */
+  lastLevelUpDate?: Date
   /** Data de criação */
   createdAt?: Date
   /** Última atualização de level */
   updatedAt?: Date
 }
-

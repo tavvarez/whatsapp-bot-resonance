@@ -41,7 +41,7 @@ export const config = {
   },
 
   /**
-   * Configurações do jogo (Tibia/Rubinot)
+   * Configurações do jogo (Rubinot)
    */
   game: {
     world: getEnvOrThrow('WORLD'),
@@ -55,8 +55,8 @@ export const config = {
     /** Intervalo entre execuções do job de mortes (em ms) - padrão 5min */
     deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 5 * 60 * 1000),
     
-    /** Intervalo entre execuções do job de level up (em ms) - padrão 8 min */
-    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 8 * 60 * 1000),
+    /** Intervalo entre execuções do job de level up (em ms) - padrão 9 min */
+    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 9 * 60 * 1000),
     
     /** Quantas mortes consecutivas já existentes para parar de verificar */
     duplicateThreshold: getEnvNumberOrDefault('DUPLICATE_THRESHOLD', 2),

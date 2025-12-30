@@ -10,6 +10,14 @@ export class SupabaseHuntedRepository implements HuntedRepository {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  private getTodayDateString(): string {
+    return new Date().toISOString().split('T')[0]!
+  }
+
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0]
+  }
+
   async findActiveByGuild(guild: string): Promise<Hunted[]> {
     const { data, error } = await this.client
       .from('hunteds')
@@ -21,7 +29,7 @@ export class SupabaseHuntedRepository implements HuntedRepository {
       throw new DatabaseError('Erro ao buscar hunteds da guild', error)
     }
 
-    return (data ?? []).map(this.mapToEntity)
+    return (data ?? []).map(d => this.mapToEntity(d))
   }
 
   async findByName(nameNormalized: string): Promise<Hunted | null> {
@@ -59,7 +67,9 @@ export class SupabaseHuntedRepository implements HuntedRepository {
         last_known_level: input.level,
         vocation: input.vocation,
         guild: input.guild,
-        is_active: true
+        is_active: true,
+        level_gain_today: 0,
+        last_level_up_date: null
       }, {
         onConflict: 'name_normalized'
       })
@@ -74,11 +84,32 @@ export class SupabaseHuntedRepository implements HuntedRepository {
   }
 
   async updateLevel(input: UpdateLevelInput): Promise<void> {
+    const now = new Date()
+    const todayStr = this.getTodayDateString()
+
+    // Primeiro, busca o hunted para verificar se é o mesmo dia
+    const hunted = await this.findByName(input.nameNormalized)
+    
+    if (!hunted) return
+
+    // Calcula o novo level_gain_today
+    let newLevelGainToday: number
+
+    if (hunted.lastLevelUpDate && this.isSameDay(hunted.lastLevelUpDate, now)) {
+      // Mesmo dia: incrementa
+      newLevelGainToday = hunted.levelGainToday + input.levelsGained
+    } else {
+      // Novo dia: reseta e começa do zero
+      newLevelGainToday = input.levelsGained
+    }
+
     const { error } = await this.client
       .from('hunteds')
       .update({
         last_known_level: input.newLevel,
-        updated_at: new Date().toISOString()
+        level_gain_today: newLevelGainToday,
+        last_level_up_date: todayStr,
+        updated_at: now.toISOString()
       })
       .eq('name_normalized', input.nameNormalized)
 
@@ -119,11 +150,15 @@ export class SupabaseHuntedRepository implements HuntedRepository {
       nameNormalized: data.name_normalized as string,
       lastKnownLevel: data.last_known_level as number,
       guild: data.guild as string,
-      isActive: data.is_active as boolean
+      isActive: data.is_active as boolean,
+      levelGainToday: (data.level_gain_today as number) ?? 0
     }
 
     if (data.vocation) {
       entity.vocation = data.vocation as string
+    }
+    if (data.last_level_up_date) {
+      entity.lastLevelUpDate = new Date(data.last_level_up_date as string)
     }
     if (data.created_at) {
       entity.createdAt = new Date(data.created_at as string)
@@ -135,4 +170,3 @@ export class SupabaseHuntedRepository implements HuntedRepository {
     return entity
   }
 }
-
