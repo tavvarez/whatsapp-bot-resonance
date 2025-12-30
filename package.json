@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "postinstall": "npx playwright install chromium --with-deps"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +18,7 @@
     "axios": "^1.13.2",
     "cheerio": "^1.1.2",
     "dotenv": "^17.2.3",
+    "playwright": "^1.40.0",
     "playwright-extra": "^4.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "qrcode-terminal": "^0.12.0"
