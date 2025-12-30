@@ -139,7 +139,7 @@ export class RubinotDeathScraper {
     options: FetchOptions = {}
   ): Promise<DeathEvent[]> {
     const { maxRetries = 5, retryDelayMs = 10000 } = options
-
+  
     const browser = await chromium.launch({
       headless: true,
       args: [
@@ -149,52 +149,65 @@ export class RubinotDeathScraper {
         '--disable-dev-shm-usage'
       ]
     })
-
-    const context = await browser.newContext({
-      storageState: 'rubinot-state.json',
+  
+    // Verifica se o arquivo de estado existe
+    const fs = await import('node:fs/promises')
+    let hasStorageState = false
+    
+    try {
+      await fs.access('rubinot-state.json')
+      hasStorageState = true
+      log('📂 Usando sessão salva do Rubinot')
+    } catch {
+      log('📂 Nenhuma sessão salva, iniciando nova')
+    }
+  
+    // Cria contexto COM ou SEM storageState
+    const contextOptions = {
       userAgent:
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
       geolocation: { latitude: -23.5505, longitude: -46.6333 },
-      permissions: ['geolocation']
-    })
-
+      permissions: ['geolocation']  // Removido "as const"
+    }
+  
+    const context = hasStorageState
+      ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
+      : await browser.newContext(contextOptions)
+  
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           log(`🔄 Tentativa ${attempt}/${maxRetries}...`)
-
+  
           const deaths = await this.doFetch(context, world, guild)
-
+  
           log(`✅ Sucesso! ${deaths.length} mortes encontradas.`)
           return deaths
         } catch (error) {
           const isCloudflareError =
             error instanceof Error && error.message === 'CLOUDFLARE_BLOCKED'
-
+  
           console.warn(
             `⚠️ Tentativa ${attempt} falhou:`,
             isCloudflareError ? 'Cloudflare bloqueou' : error
           )
-
+  
           if (attempt === maxRetries) {
             if (isCloudflareError) {
-              throw new Error(
-                '🛑 Cloudflare bloqueou todas as tentativas. Execute: npm run init:rubinot para renovar a sessão manualmente.'
-              )
+              throw new Error('🛑 Cloudflare bloqueou todas as tentativas.')
             }
             throw error
           }
-
-          // Delay progressivo: 10s, 20s, 30s, 40s, 50s
+  
           const delay = retryDelayMs * attempt
           log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
-
+  
       throw new Error('Todas as tentativas falharam')
     } finally {
       await browser.close()
