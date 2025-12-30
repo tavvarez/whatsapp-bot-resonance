@@ -10,12 +10,14 @@ import { RubinotGuildScraper } from '../../infra/scraper/RubinotGuildScraper.js'
 import { SupabaseHuntedRepository } from '../../infra/database/SupabaseHuntedRepository.js'
 import { normalizeText } from '../../shared/utils/normalizeText.js'
 
-const GUILD = process.env.GUILD
+const GUILD_ENV = process.env.GUILD
 
-if (!GUILD) {
+if (!GUILD_ENV) {
   console.error('❌ Variável de ambiente GUILD não definida')
   process.exit(1)
 }
+
+const GUILD: string = GUILD_ENV
 
 async function main() {
   console.log('🚀 Iniciando população da tabela de hunteds...')

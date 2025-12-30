@@ -11,12 +11,22 @@ vi.mock('../../shared/utils/logger.js', () => ({
 describe('CommandParser', () => {
   let parser: CommandParser
 
-  const createMockCommand = (name: string, aliases?: string[]): Command => ({
-    name,
-    description: `Comando ${name}`,
-    aliases,
-    execute: vi.fn()
-  })
+  const createMockCommand = (name: string, aliases?: string[]): Command => {
+    if (aliases) {
+      return {
+        name,
+        description: `Comando ${name}`,
+        aliases,
+        execute: vi.fn()
+      }
+    }
+    
+    return {
+      name,
+      description: `Comando ${name}`,
+      execute: vi.fn()
+    }
+  }
 
   beforeEach(() => {
     parser = new CommandParser('@bot')
