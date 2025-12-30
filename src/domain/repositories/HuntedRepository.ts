@@ -10,6 +10,8 @@ export interface CreateHuntedInput {
 export interface UpdateLevelInput {
   nameNormalized: string
   newLevel: number
+  /** Quantos levels upou neste evento */
+  levelsGained: number
 }
 
 export interface HuntedRepository {
@@ -34,7 +36,7 @@ export interface HuntedRepository {
   save(input: CreateHuntedInput): Promise<Hunted>
 
   /**
-   * Atualiza o level de um hunted.
+   * Atualiza o level de um hunted e incrementa o contador diário.
    */
   updateLevel(input: UpdateLevelInput): Promise<void>
 
@@ -49,4 +51,3 @@ export interface HuntedRepository {
    */
   deactivate(nameNormalized: string): Promise<void>
 }
-
