@@ -9,12 +9,19 @@ export interface GuildMember {
 }
 
 /**
+ * Opções para busca de membros da guild.
+ */
+export interface FetchMembersOptions {
+  maxRetries?: number
+  retryDelayMs?: number
+}
+
+/**
  * Interface para scrapers de dados de guild.
  */
 export interface GuildScraper {
   /**
    * Busca todos os membros de uma guild com seus níveis atuais.
    */
-  fetchMembers(guildName: string): Promise<GuildMember[]>
+  fetchMembers(guildName: string, options?: FetchMembersOptions): Promise<GuildMember[]>
 }
-

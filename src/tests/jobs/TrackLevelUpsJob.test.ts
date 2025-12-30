@@ -10,6 +10,16 @@ vi.mock('../../shared/utils/logger.js', () => ({
   logError: vi.fn()
 }))
 
+// Mock do config para não precisar de variáveis de ambiente
+vi.mock('../../config/index.js', () => ({
+  config: {
+    scraper: {
+      maxRetries: 3,
+      retryDelayMs: 1000
+    }
+  }
+}))
+
 describe('TrackLevelUpsJob', () => {
   let job: TrackLevelUpsJob
   let mockHuntedRepository: HuntedRepository
