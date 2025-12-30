@@ -1,5 +1,5 @@
-# Usa imagem oficial do Playwright que já tem tudo instalado
-FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+# Usa imagem oficial do Playwright na versão correta
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy
 
 WORKDIR /app
 
