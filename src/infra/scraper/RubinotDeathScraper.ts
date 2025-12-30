@@ -3,6 +3,7 @@ import stealth from 'puppeteer-extra-plugin-stealth'
 import crypto from 'node:crypto'
 import type { Page, BrowserContext } from 'playwright'
 import type { DeathEvent } from '../../domain/entities/DeathEvent.js'
+import { log } from '../../shared/utils/logger.js'
 
 // Aplica o plugin stealth para evitar detecção
 chromium.use(stealth())
@@ -49,11 +50,11 @@ export class RubinotDeathScraper {
       const isCloudflare = await this.detectCloudflare(page)
 
       if (!isCloudflare) {
-        console.log('✅ Cloudflare liberou!')
+        log('✅ Cloudflare liberou!')
         return true
       }
 
-      console.log('⏳ Aguardando Cloudflare...')
+      log('⏳ Aguardando Cloudflare...')
       await page.waitForTimeout(3000)
     }
 
@@ -69,7 +70,7 @@ export class RubinotDeathScraper {
 
     // Verifica Cloudflare e espera passar
     if (await this.detectCloudflare(page)) {
-      console.log('🛡️ Cloudflare detectado, aguardando liberação...')
+      log('🛡️ Cloudflare detectado, aguardando liberação...')
       const passed = await this.waitForCloudflareToPass(page, 45000)
 
       if (!passed) {
@@ -163,11 +164,11 @@ export class RubinotDeathScraper {
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 Tentativa ${attempt}/${maxRetries}...`)
+          log(`🔄 Tentativa ${attempt}/${maxRetries}...`)
 
           const deaths = await this.doFetch(context, world, guild)
 
-          console.log(`✅ Sucesso! ${deaths.length} mortes encontradas.`)
+          log(`✅ Sucesso! ${deaths.length} mortes encontradas.`)
           return deaths
         } catch (error) {
           const isCloudflareError =
@@ -189,7 +190,7 @@ export class RubinotDeathScraper {
 
           // Delay progressivo: 10s, 20s, 30s, 40s, 50s
           const delay = retryDelayMs * attempt
-          console.log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
+          log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
@@ -202,34 +203,35 @@ export class RubinotDeathScraper {
 
   private parseRow(rawText: string, world: string, guild: string): DeathEvent {
     const normalized = rawText.replace(/\s+/g, ' ').trim()
-
+  
     const match = normalized.match(
       /(\d{1,2}\.\d{1,2}\.\d{4},\s*\d{1,2}:\d{2}:\d{2})\s+(.+?)\s+died at level\s+(\d+)/
     )
-
+  
     if (!match) {
       throw new Error(`Formato inesperado: ${normalized}`)
     }
-
+  
     const dateStr = match[1]!
     const playerName = match[2]!
     const level = Number(match[3]!)
-
+  
     const [datePart, timePart] = dateStr.split(', ')
     const [day, month, year] = datePart!.split('.')
-
+  
     const paddedDay = day!.padStart(2, '0')
     const paddedMonth = month!.padStart(2, '0')
     const normalizedTime = timePart!.replace(/^(\d):/, '0$1:')
-
+  
     const isoDate = `${year}-${paddedMonth}-${paddedDay}T${normalizedTime}`
     const occurredAt = new Date(isoDate)
-
+  
+    // ✅ Hash baseado em dados IMUTÁVEIS (sem rawText)
     const hash = crypto
       .createHash('sha1')
-      .update(`${world}|${guild}|${rawText}`)
+      .update(`${world}|${guild}|${playerName}|${occurredAt.toISOString()}|${level}`)
       .digest('hex')
-
+  
     return {
       world,
       guild,
