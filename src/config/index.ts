@@ -52,11 +52,11 @@ export const config = {
    * Configurações dos Jobs
    */
   jobs: {
-    /** Intervalo entre execuções do job de mortes (em ms) - padrão 5min */
-    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 5 * 60 * 1000),
+    /** Intervalo entre execuções do job de mortes (em ms) - padrão 7 min */
+    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 7 * 60 * 1000),
     
-    /** Intervalo entre execuções do job de level up (em ms) - padrão 9 min */
-    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 9 * 60 * 1000),
+    /** Intervalo entre execuções do job de level up (em ms) - padrão 10 min */
+    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 10 * 60 * 1000),
     
     /** Quantas mortes consecutivas já existentes para parar de verificar */
     duplicateThreshold: getEnvNumberOrDefault('DUPLICATE_THRESHOLD', 2),

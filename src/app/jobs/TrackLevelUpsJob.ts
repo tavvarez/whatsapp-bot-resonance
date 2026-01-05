@@ -61,8 +61,6 @@ export class TrackLevelUpsJob {
       return
     }
 
-    log(`🎉 ${levelUps.length} level up(s) detectado(s)!`)
-
     // 4. Atualiza os levels no banco
     const updates = levelUps.map(event => ({
       nameNormalized: normalizeText(event.playerName),
@@ -72,8 +70,18 @@ export class TrackLevelUpsJob {
 
     await this.huntedRepository.batchUpdateLevels(updates)
 
+
+    const levelUpsToNotify = levelUps.filter((event) => event.newLevel >= 600);
+    if (levelUpsToNotify.length > 0) {
+      await this.notifyLevelUps(levelUpsToNotify, notifyTo);
+    } else {
+      log(
+        `ℹ️ ${levelUps.length} level up(s) detectado(s), mas todos abaixo de 600 - não notificando`
+      );
+    }
+
     // 5. Notifica via WhatsApp
-    await this.notifyLevelUps(levelUps, notifyTo)
+    // await this.notifyLevelUps(levelUps, notifyTo)
   }
 
   private async initializeHunteds(members: GuildMember[], guild: string): Promise<void> {
@@ -162,7 +170,7 @@ export class TrackLevelUpsJob {
 
     for (const event of levelUps) {
       const emoji = event.totalGainToday >= 4 ? '⚠️' : '⬆️'
-      const ptWarning = event.totalGainToday >= 4 ? ' _(⚠️ possivelmente está caçando em PT)_' : ''
+      const ptWarning = event.totalGainToday >= 4 ? ' _(possivelmente está caçando em PT)_' : ''
       
       lines.push(
         `${emoji} *${event.playerName}* upou -> *${event.newLevel}*`,

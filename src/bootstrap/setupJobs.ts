@@ -73,11 +73,11 @@ export async function startScheduledJobs(): Promise<void> {
   // Executa jobs imediatamente (com delay entre eles)
   await runDeathJobs()
   
-  // Delay de 30s antes de rodar o job de level up
+  // Delay de 60s antes de rodar o job de level up
   // Evita duas requisições simultâneas ao Rubinot
   setTimeout(async () => {
     await runLevelUpJob()
-  }, 30000)
+  }, 60000)
 
   // Agenda execuções periódicas
   setInterval(runDeathJobs, config.jobs.deathIntervalMs)
