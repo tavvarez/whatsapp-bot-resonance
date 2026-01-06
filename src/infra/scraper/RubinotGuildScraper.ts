@@ -4,6 +4,7 @@ import type { Page, BrowserContext } from 'playwright'
 import type { GuildScraper, GuildMember, FetchMembersOptions } from '../../domain/scrapers/GuildScraper.js'
 import { log } from '../../shared/utils/logger.js'
 import { CloudflareBlockedError, ScraperError } from '../../shared/errors/index.js'
+import { config } from '../../config/index.js'
 
 chromium.use(stealth())
 
@@ -25,16 +26,23 @@ export class RubinotGuildScraper implements GuildScraper {
     await page.waitForTimeout(delay)
   }
 
-  // private async humanDelay(page: Page, min = 300, max = 800): Promise<void> {
-  //   const delay = Math.random() * (max - min) + min
-  //   await page.waitForTimeout(delay)
-  // }
-
-  private async detectCloudflare(page: Page): Promise<boolean> {
+  private async detectCloudflare(page: Page): Promise<{ isBlocked: boolean; isPermanent: boolean }> {
     try {
       await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {})
       
-      const indicators = [
+      const pageContent = await page.content()
+      const pageTitle = await page.title()
+
+      const permanentBlockIndicators = [
+        'Sorry, you have been blocked',
+        'Why have I been blocked?',
+        'You are unable to access',
+        'Attention Required! | Cloudflare',
+        'blocked_why_headline',
+        'block_headline'
+      ]
+
+      const challengeIndicators = [
         'cf-browser-verification',
         'cf_chl_opt',
         'challenge-running',
@@ -42,12 +50,21 @@ export class RubinotGuildScraper implements GuildScraper {
         'Verify you are human'
       ]
 
-      const content = await page.content()
-      const title = await page.title()
+      const isPermanentBlock = permanentBlockIndicators.some(
+        i => pageContent.includes(i) || pageTitle.includes(i)
+      )
 
-      return indicators.some(i => content.includes(i) || title.includes(i))
+      if (isPermanentBlock) {
+        return { isBlocked: true, isPermanent: true }
+      }
+
+      const isChallenge = challengeIndicators.some(
+        i => pageContent.includes(i) || pageTitle.includes(i)
+      )
+
+      return { isBlocked: isChallenge, isPermanent: false }
     } catch {
-      return true
+      return { isBlocked: true, isPermanent: false }
     }
   }
 
@@ -55,9 +72,17 @@ export class RubinotGuildScraper implements GuildScraper {
     const start = Date.now()
 
     while (Date.now() - start < timeoutMs) {
-      if (!(await this.detectCloudflare(page))) {
+      const { isBlocked, isPermanent } = await this.detectCloudflare(page)
+
+      if (isPermanent) {
+        log('🚫 Bloqueio permanente detectado (guild) - IP foi bloqueado')
+        return false
+      }
+
+      if (!isBlocked) {
         return true
       }
+      
       log('⏳ Aguardando Cloudflare (guild)...')
       await page.waitForTimeout(2000)
     }
@@ -75,19 +100,26 @@ export class RubinotGuildScraper implements GuildScraper {
         timeout: 60000
       })
 
-      await this.humanDelay(page, 10000, 20000)
+      await this.humanDelay(page, 1000, 2000)
 
-      if (await this.detectCloudflare(page)) {
-        log('🛡️ Cloudflare detectado (guild)...')
-        const passed = await this.waitForCloudflare(page)
-        if (!passed) {
+      const { isBlocked, isPermanent } = await this.detectCloudflare(page)
+      
+      if (isBlocked) {
+        if (isPermanent) {
+          log('🚫 IP bloqueado permanentemente (guild)')
           throw new CloudflareBlockedError()
+        } else {
+          log('🛡️ Cloudflare detectado (guild)...')
+          const passed = await this.waitForCloudflare(page)
+          if (!passed) {
+            throw new CloudflareBlockedError()
+          }
         }
       }
 
       await this.humanDelay(page)
 
-      await page.waitForSelector('table.TableContent', { timeout: 120000 })
+      await page.waitForSelector('table.TableContent', { timeout: 30000 })
 
       const members = await page.$$eval('table.TableContent tr', (rows) => {
         const result: Array<{ playerName: string; level: number; vocation: string; isOnline: boolean }> = []
@@ -127,7 +159,7 @@ export class RubinotGuildScraper implements GuildScraper {
   }
 
   async fetchMembers(guildName: string, options: FetchMembersOptions = {}): Promise<GuildMember[]> {
-    const { maxRetries = 5, retryDelayMs = 20000 } = options // Aumentado para 15s base
+    const { maxRetries = 5, retryDelayMs = 15000 } = options
     
     log(`🔍 Buscando membros da guild: ${guildName}`)
 
@@ -143,7 +175,20 @@ export class RubinotGuildScraper implements GuildScraper {
       ]
     })
 
-    const contextOptions = {
+    // Prepara opções de proxy
+    const proxyConfig = config.scraper.proxyServer
+      ? { server: config.scraper.proxyServer }
+      : undefined
+
+    if (proxyConfig) {
+      const maskedProxy = config.scraper.proxyServer.replace(/:[^:@]+@/, ':****@')
+      log(`🌐 Usando proxy (guild): ${maskedProxy}`)
+    } else {
+      log('🌐 Rodando sem proxy (guild)')
+    }
+
+    // Constrói contextOptions sem proxy primeiro
+    const contextOptionsBase = {
       userAgent: this.getRandomUserAgent(),
       viewport: { width: 1920, height: 1080 },
       locale: 'pt-BR',
@@ -156,6 +201,11 @@ export class RubinotGuildScraper implements GuildScraper {
         'Connection': 'keep-alive'
       }
     }
+
+    // Adiciona proxy apenas se configurado
+    const contextOptions = proxyConfig
+      ? { ...contextOptionsBase, proxy: proxyConfig }
+      : contextOptionsBase
 
     const context = await browser.newContext(contextOptions)
 
@@ -183,7 +233,6 @@ export class RubinotGuildScraper implements GuildScraper {
             throw new ScraperError('Todas as tentativas de scraping da guild falharam', error)
           }
 
-          // Backoff exponencial com jitter
           const baseDelay = retryDelayMs * Math.pow(2, attempt - 1)
           const jitter = Math.random() * 0.3 * baseDelay
           const delay = baseDelay + jitter

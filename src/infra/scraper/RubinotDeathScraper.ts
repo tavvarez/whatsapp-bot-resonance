@@ -6,12 +6,13 @@ import type { DeathEvent } from '../../domain/entities/DeathEvent.js'
 import type { DeathScraper, FetchDeathsParams, FetchDeathsOptions } from '../../domain/scrapers/DeathScraper.js'
 import { log } from '../../shared/utils/logger.js'
 import { CloudflareBlockedError, ParseError, ScraperError } from '../../shared/errors/index.js'
+import { config } from '../../config/index.js'
 
 // Aplica o plugin stealth para evitar detecção
 chromium.use(stealth())
 
 export class RubinotDeathScraper implements DeathScraper {
-  private async humanDelay(page: Page, min = 10000, max = 30000): Promise<void> {
+  private async humanDelay(page: Page, min = 1000, max = 3000): Promise<void> {
     const delay = Math.random() * (max - min) + min
     await page.waitForTimeout(delay)
   }
@@ -28,9 +29,23 @@ export class RubinotDeathScraper implements DeathScraper {
     return this.userAgents[Math.floor(Math.random() * this.userAgents.length)]!
   }
 
+  private async detectCloudflare(page: Page): Promise<{ isBlocked: boolean; isPermanent: boolean }> {
+    const pageContent = await page.content()
+    const pageTitle = await page.title()
 
-  private async detectCloudflare(page: Page): Promise<boolean> {
-    const cloudflareIndicators = [
+    // Indicadores de bloqueio PERMANENTE
+    const permanentBlockIndicators = [
+      'Sorry, you have been blocked',
+      'Why have I been blocked?',
+      'You are unable to access',
+      'Attention Required! | Cloudflare',
+      'blocked_why_headline',
+      'block_headline',
+      'unable_to_access'
+    ]
+
+    // Indicadores de CHALLENGE
+    const challengeIndicators = [
       'cf-browser-verification',
       'cf_chl_opt',
       'challenge-running',
@@ -40,26 +55,38 @@ export class RubinotDeathScraper implements DeathScraper {
       'Verify you are human'
     ]
 
-    const pageContent = await page.content()
-    const pageTitle = await page.title()
-
-    return cloudflareIndicators.some(
+    const isPermanentBlock = permanentBlockIndicators.some(
       indicator => pageContent.includes(indicator) || pageTitle.includes(indicator)
     )
+
+    if (isPermanentBlock) {
+      return { isBlocked: true, isPermanent: true }
+    }
+
+    const isChallenge = challengeIndicators.some(
+      indicator => pageContent.includes(indicator) || pageTitle.includes(indicator)
+    )
+
+    return { isBlocked: isChallenge, isPermanent: false }
   }
 
   private async waitForCloudflareToPass(page: Page, timeoutMs = 45000): Promise<boolean> {
     const startTime = Date.now()
 
     while (Date.now() - startTime < timeoutMs) {
-      const isCloudflare = await this.detectCloudflare(page)
+      const { isBlocked, isPermanent } = await this.detectCloudflare(page)
 
-      if (!isCloudflare) {
+      if (isPermanent) {
+        log('🚫 Bloqueio permanente detectado - IP foi bloqueado pelo Cloudflare')
+        return false
+      }
+
+      if (!isBlocked) {
         log('✅ Cloudflare liberou!')
         return true
       }
 
-      log('⏳ Aguardando Cloudflare...')
+      log('⏳ Aguardando Cloudflare challenge passar...')
       await page.waitForTimeout(3000)
     }
 
@@ -67,29 +94,34 @@ export class RubinotDeathScraper implements DeathScraper {
   }
 
   private async submitForm(page: Page, world: string, guild: string): Promise<void> {
-    // Passo 1: Navega para a página
     await page.goto('https://rubinot.com.br/?subtopic=latestdeaths', {
       waitUntil: 'networkidle',
       timeout: 70000
     })
     await page.waitForTimeout(2000)
 
-    // Verifica Cloudflare e espera passar
-    if (await this.detectCloudflare(page)) {
-      log('🛡️ Cloudflare detectado, aguardando liberação...')
-      const passed = await this.waitForCloudflareToPass(page, 45000)
-
-      if (!passed) {
+    const { isBlocked, isPermanent } = await this.detectCloudflare(page)
+    
+    if (isBlocked) {
+      if (isPermanent) {
+        log('🚫 IP bloqueado permanentemente pelo Cloudflare')
         throw new CloudflareBlockedError()
+      } else {
+        log('🛡️ Cloudflare challenge detectado, aguardando liberação...')
+        const passed = await this.waitForCloudflareToPass(page, 45000)
+
+        if (!passed) {
+          throw new CloudflareBlockedError()
+        }
+        await page.waitForTimeout(2000)
       }
-      await page.waitForTimeout(2000)
     }
 
     await this.humanDelay(page)
 
     const worldSelectors = [
       'select[name="world"]',
-      'select[name="size"]',
+      'select[name="server"]'
     ]
 
     let worldSelector = null
@@ -104,7 +136,6 @@ export class RubinotDeathScraper implements DeathScraper {
     }
     
     if (!worldSelector) {
-      // Debug: loga o HTML da página para diagnóstico
       const html = await page.content()
       log(`❌ Selector de world não encontrado. HTML (primeiros 2000 chars): ${html.slice(0, 2000)}`)
       throw new ScraperError('Não foi possível encontrar o seletor de world')
@@ -115,12 +146,10 @@ export class RubinotDeathScraper implements DeathScraper {
     await page.selectOption(worldSelector, world)
     await this.humanDelay(page)
 
-    // Primeiro submit
     await page.click('input.BigButtonText[type="submit"]')
-    await page.waitForLoadState('networkidle') // Muda para networkidle
+    await page.waitForLoadState('networkidle')
     await this.humanDelay(page)
 
-    // Passo 3: Agora seleciona a Guild e faz o segundo submit
     const guildSelectors = [
       'select[name="guild"]',
       'select#guild'
@@ -146,38 +175,8 @@ export class RubinotDeathScraper implements DeathScraper {
     await page.selectOption(guildSelector, guild)
     await this.humanDelay(page)
 
-    // Espera a tabela de deaths aparecer
     await page.waitForSelector('table.TableContent', { timeout: 120000 })
   }
-
-  //   // Passo 2: Seleciona o World e faz o primeiro submit
-  //   await page.waitForSelector('select[name="world"]', {
-  //     state: 'visible',
-  //     timeout: 120000
-  //   })
-    
-  //   await this.humanDelay(page)
-  //   await page.selectOption('select[name="world"]', world)
-  //   await this.humanDelay(page)
-
-  //   // Primeiro submit
-  //   await page.click('input.BigButtonText[type="submit"]')
-  //   await page.waitForLoadState('domcontentloaded')
-  //   await this.humanDelay(page)
-
-  //   // Passo 3: Agora seleciona a Guild e faz o segundo submit
-  //   await page.waitForSelector('select[name="guild"]', {
-  //     state: 'visible',
-  //     timeout: 120000
-  //   })
-    
-  //   await this.humanDelay(page)
-  //   await page.selectOption('select[name="guild"]', guild)
-  //   await this.humanDelay(page)
-
-  //   // Espera a tabela de deaths aparecer
-  //   await page.waitForSelector('table.TableContent', { timeout: 120000 })
-  // }
 
   private async doFetch(
     context: BrowserContext,
@@ -195,8 +194,12 @@ export class RubinotDeathScraper implements DeathScraper {
           .filter(text => text.includes(' died at level '))
       )
 
-      // Salva o estado atualizado (cookies renovados)
-      await context.storageState({ path: 'rubinot-state.json' })
+      const statePath = 'rubinot-state.json'
+      try {
+        await context.storageState({ path: statePath })
+      } catch (error) {
+        log(`⚠️ Não foi possível salvar estado: ${error}`)
+      }
 
       return rows.map(raw => this.parseRow(raw, world, guild))
     } finally {
@@ -215,7 +218,11 @@ export class RubinotDeathScraper implements DeathScraper {
       args: [
         "--disable-blink-features=AutomationControlled",
         "--no-sandbox",
-        "--disable-setuid-sandbox"
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
+        "--disable-site-isolation-trials",
       ],
     });
 
@@ -231,10 +238,26 @@ export class RubinotDeathScraper implements DeathScraper {
       log("📂 Nenhuma sessão salva, iniciando nova");
     }
 
-    const contextOptions = {
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-      // userAgent: this.getRandomUserAgent(),
-      viewport: { width: 1366, height: 768 },
+    // Prepara opções de proxy
+    const proxyConfig = config.scraper.proxyServer
+      ? { server: config.scraper.proxyServer }
+      : undefined;
+
+    if (proxyConfig) {
+      // Esconde senha no log
+      const maskedProxy = config.scraper.proxyServer.replace(
+        /:[^:@]+@/,
+        ":****@"
+      );
+      log(`🌐 Usando proxy: ${maskedProxy}`);
+    } else {
+      log("🌐 Rodando sem proxy");
+    }
+
+    // Constrói contextOptions sem proxy primeiro
+    const contextOptionsBase = {
+      userAgent: this.getRandomUserAgent(),
+      viewport: { width: 1920, height: 1080 },
       locale: "pt-BR",
       timezoneId: "America/Sao_Paulo",
       geolocation: { latitude: -23.5509, longitude: -46.6333 },
@@ -250,11 +273,13 @@ export class RubinotDeathScraper implements DeathScraper {
       },
     };
 
+    // Adiciona proxy apenas se configurado
+    const contextOptions = proxyConfig
+      ? { ...contextOptionsBase, proxy: proxyConfig }
+      : contextOptionsBase;
+
     let context = hasStorageState
-      ? await browser.newContext({
-          ...contextOptions,
-          storageState: "rubinot-state.json",
-        })
+      ? await browser.newContext({ ...contextOptions, storageState: statePath })
       : await browser.newContext(contextOptions);
 
     try {
@@ -269,7 +294,6 @@ export class RubinotDeathScraper implements DeathScraper {
             log("💾 Estado da sessão salvo/atualizado");
           } catch (error) {
             log(`⚠️ Não foi possível salvar estado: ${error}`);
-            // Não falha o processo se não conseguir salvar
           }
 
           log(`✅ Sucesso! ${deaths.length} mortes encontradas.`);
@@ -284,8 +308,6 @@ export class RubinotDeathScraper implements DeathScraper {
 
           if (attempt === maxRetries) {
             if (isCloudflareError) {
-              // Quando Cloudflare bloqueia todas as tentativas, lança erro especial
-              // que será tratado no job para pausar por 1 hora
               throw error;
             }
             throw new ScraperError(
@@ -294,7 +316,6 @@ export class RubinotDeathScraper implements DeathScraper {
             );
           }
 
-          // Backoff exponencial com jitter aleatório
           const baseDelay = retryDelayMs * Math.pow(2, attempt - 1);
           const jitter = Math.random() * 0.3 * baseDelay;
           const delay = baseDelay + jitter;
@@ -306,43 +327,28 @@ export class RubinotDeathScraper implements DeathScraper {
           );
           await new Promise((resolve) => setTimeout(resolve, delay));
 
-          // Se foi Cloudflare, limpa cookies e recria contexto
           if (isCloudflareError) {
             log("🧹 Limpando cookies e recriando contexto...");
 
             try {
-              // Limpa cookies do domínio rubinot.com.br
               await context.clearCookies();
-              log("✅ Cookies limpos do contexto");
+              log("✅ Cookies limpos");
             } catch (clearError) {
               log(`⚠️ Erro ao limpar cookies: ${clearError}`);
             }
 
-            // Fecha o contexto atual
             await context.close();
 
-            // Tenta deletar o arquivo de storage state se existir
             try {
               await fs.unlink(statePath);
-              log("🗑️ Arquivo de storage state deletado");
+              log("🗑️ Storage state deletado");
               hasStorageState = false;
             } catch (unlinkError) {
-              // Ignora se o arquivo não existir
-              log("ℹ️ Storage state não encontrado ou já foi deletado");
+              // Ignora se não existir
             }
 
-            // Cria um novo contexto SEM storage state (fresh start)
             context = await browser.newContext(contextOptions);
-            log("🆕 Novo contexto criado sem cookies");
-
-            // Se foi Cloudflare, fecha e recria o contexto para "resetar" a sessão
-            // if (isCloudflareError) {
-            //   await context.close()
-            //   const newContext = hasStorageState
-            //     ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
-            //     : await browser.newContext(contextOptions)
-            //   Object.assign(context, newContext)
-            // }
+            log("🆕 Novo contexto criado");
           }
         }
       }
@@ -352,7 +358,6 @@ export class RubinotDeathScraper implements DeathScraper {
       await browser.close();
     }
   }
-
 
   private parseRow(rawText: string, world: string, guild: string): DeathEvent {
     const normalized = rawText.replace(/\s+/g, ' ').trim()
@@ -379,7 +384,6 @@ export class RubinotDeathScraper implements DeathScraper {
     const isoDate = `${year}-${paddedMonth}-${paddedDay}T${normalizedTime}`
     const occurredAt = new Date(isoDate)
   
-    // ✅ Hash baseado em dados IMUTÁVEIS (sem rawText)
     const hash = crypto
       .createHash('sha1')
       .update(`${world}|${guild}|${playerName}|${occurredAt.toISOString()}|${level}`)
