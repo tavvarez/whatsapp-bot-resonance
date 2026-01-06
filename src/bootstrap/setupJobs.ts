@@ -77,7 +77,7 @@ export async function startScheduledJobs(): Promise<void> {
   // Evita duas requisições simultâneas ao Rubinot
   setTimeout(async () => {
     await runLevelUpJob()
-  }, 60000)
+  }, 120000)
 
   // Agenda execuções periódicas
   setInterval(runDeathJobs, config.jobs.deathIntervalMs)
