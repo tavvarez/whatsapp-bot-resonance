@@ -217,53 +217,53 @@ export class RubinotDeathScraper implements DeathScraper {
       log("📂 Nenhuma sessão salva, iniciando nova");
     }
 
-    // Prepara opções de proxy (formato correto para Playwright + IPRoyal)
-    const proxyServer = config.scraper.proxyServer.trim();
+// Prepara opções de proxy (formato correto para Playwright + IPRoyal)
+const proxyServer = config.scraper.proxyServer?.trim();
 
-    type ProxyConfig = {
-      server: string;
-      username: string;
-      password: string;
-    };
+type ProxyConfig = {
+  server: string;
+  username: string;
+  password: string;
+};
 
-    let proxyConfig: ProxyConfig | undefined;
+let proxyConfig: ProxyConfig | undefined;
 
-    if (proxyServer) {
-      // Formato esperado: user:pass:host:port
-      const parts = proxyServer.split(":");
+if (proxyServer) {
+  let url: URL;
 
-      if (
-        parts.length !== 4 ||
-        !parts[0] ||
-        !parts[1] ||
-        !parts[2] ||
-        !parts[3]
-      ) {
-        throw new Error(
-          "Formato de proxy inválido. Use user:pass:host:port"
-        );
-      }
-      
-      const username: string = parts[0];
-      const password: string = parts[1];
-      const host: string = parts[2];
-      const port: string = parts[3];
+  try {
+    url = new URL(proxyServer);
+  } catch {
+    throw new Error(
+      "Formato de proxy inválido. Use http://user:pass@host:port"
+    );
+  }
 
-      proxyConfig = {
-        server: `http://${host}:${port}`,
-        username,
-        password,
-      };
+  const { protocol, hostname, port, username, password } = url;
 
-      log(`🌐 Usando proxy: ${host}:${port} (auth via username/password)`);
-    } else {
-      log("🌐 Rodando sem proxy");
-    }
+  if (!hostname || !port || !username || !password) {
+    throw new Error(
+      "Proxy incompleto. Verifique user, pass, host e port"
+    );
+  }
 
-    if (proxyConfig) {
-      console.log("🔐 Proxy server:", proxyConfig.server);
-      console.log("🔐 Proxy user:", proxyConfig.username);
-    }
+  proxyConfig = {
+    server: `${protocol}//${hostname}:${port}`,
+    username,
+    password,
+  };
+
+  const maskedUser = username.slice(0, 4) + "****";
+  log(`🌐 Usando proxy: ${hostname}:${port} (user: ${maskedUser})`);
+} else {
+  log("🌐 Rodando sem proxy");
+}
+
+if (proxyConfig) {
+  console.log("🔐 Proxy server:", proxyConfig.server);
+  console.log("🔐 Proxy auth: username/password OK");
+}
+
 
     const contextOptionsBase = {
       userAgent:
