@@ -11,7 +11,7 @@ import { CloudflareBlockedError, ParseError, ScraperError } from '../../shared/e
 chromium.use(stealth())
 
 export class RubinotDeathScraper implements DeathScraper {
-  private async humanDelay(page: Page, min = 1000, max = 3000): Promise<void> {
+  private async humanDelay(page: Page, min = 10000, max = 30000): Promise<void> {
     const delay = Math.random() * (max - min) + min
     await page.waitForTimeout(delay)
   }
@@ -88,7 +88,7 @@ export class RubinotDeathScraper implements DeathScraper {
     // Passo 2: Seleciona o World e faz o primeiro submit
     await page.waitForSelector('select[name="world"]', {
       state: 'visible',
-      timeout: 30000
+      timeout: 120000
     })
     
     await this.humanDelay(page)
@@ -103,7 +103,7 @@ export class RubinotDeathScraper implements DeathScraper {
     // Passo 3: Agora seleciona a Guild e faz o segundo submit
     await page.waitForSelector('select[name="guild"]', {
       state: 'visible',
-      timeout: 30000
+      timeout: 120000
     })
     
     await this.humanDelay(page)
@@ -111,7 +111,7 @@ export class RubinotDeathScraper implements DeathScraper {
     await this.humanDelay(page)
 
     // Espera a tabela de deaths aparecer
-    await page.waitForSelector('table.TableContent', { timeout: 30000 })
+    await page.waitForSelector('table.TableContent', { timeout: 120000 })
   }
 
   private async doFetch(
