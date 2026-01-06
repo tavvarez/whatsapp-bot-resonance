@@ -98,7 +98,7 @@ export class RubinotDeathScraper implements DeathScraper {
     guild: string
   ): Promise<void> {
     // Passo 1: Navega para a página
-    await page.goto("https://rubinot.com.br/?subtopic=latestdeaths", {
+    await page.goto("https://rubinot.com.br/?subtopic=latestdeaths&world=18&guild=Genesis", {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
