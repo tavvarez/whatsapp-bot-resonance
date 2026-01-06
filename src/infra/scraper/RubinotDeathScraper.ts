@@ -215,11 +215,7 @@ export class RubinotDeathScraper implements DeathScraper {
       args: [
         "--disable-blink-features=AutomationControlled",
         "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process",
-        "--disable-site-isolation-trials",
+        "--disable-setuid-sandbox"
       ],
     });
 
@@ -236,8 +232,9 @@ export class RubinotDeathScraper implements DeathScraper {
     }
 
     const contextOptions = {
-      userAgent: this.getRandomUserAgent(),
-      viewport: { width: 1920, height: 1080 },
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      // userAgent: this.getRandomUserAgent(),
+      viewport: { width: 1366, height: 768 },
       locale: "pt-BR",
       timezoneId: "America/Sao_Paulo",
       geolocation: { latitude: -23.5509, longitude: -46.6333 },
