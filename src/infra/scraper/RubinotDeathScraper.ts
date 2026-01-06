@@ -9,7 +9,7 @@ import { CloudflareBlockedError, ParseError, ScraperError } from '../../shared/e
 import { config } from '../../config/index.js'
 
 // Aplica o plugin stealth para evitar detecção
-chromium.use(stealth())
+chromium.use(stealth());
 
 export class RubinotDeathScraper implements DeathScraper {
   private async humanDelay(page: Page, min = 500, max = 1500): Promise<void> {
@@ -190,38 +190,43 @@ export class RubinotDeathScraper implements DeathScraper {
     }
 
     // Prepara opções de proxy
-    const proxyServer = config.scraper.proxyServer.trim()
-    const normalizedProxyUrl = proxyServer ? this.normalizeProxyUrl(proxyServer) : undefined
+    const proxyServer = config.scraper.proxyServer.trim();
+    const normalizedProxyUrl = proxyServer
+      ? this.normalizeProxyUrl(proxyServer)
+      : undefined;
     const proxyConfig = normalizedProxyUrl
       ? { server: normalizedProxyUrl }
-      : undefined
+      : undefined;
 
     if (proxyConfig) {
-      const maskedProxy = proxyConfig.server.replace(/:[^:@]+@/, ':****@')
-      log(`🌐 Usando proxy: ${maskedProxy}`)
+      const maskedProxy = proxyConfig.server.replace(/:[^:@]+@/, ":****@");
+      log(`🌐 Usando proxy: ${maskedProxy}`);
     } else {
-      log('🌐 Rodando sem proxy')
+      log("🌐 Rodando sem proxy");
     }
-  
-    // Constrói contextOptions base
+
+    // Cria contexto COM ou SEM storageState
     const contextOptionsBase = {
       userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       viewport: { width: 1920, height: 1080 },
-      locale: 'pt-BR',
-      timezoneId: 'America/Sao_Paulo',
+      locale: "pt-BR",
+      timezoneId: "America/Sao_Paulo",
       geolocation: { latitude: -23.5505, longitude: -46.6333 },
-      permissions: ['geolocation']
-    }
+      permissions: ["geolocation"], // Removido "as const"
+    };
 
     // Adiciona proxy apenas se configurado
     const contextOptions = proxyConfig
       ? { ...contextOptionsBase, proxy: proxyConfig }
-      : contextOptionsBase
-  
+      : contextOptionsBase;
+
     const context = hasStorageState
-      ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
-      : await browser.newContext(contextOptions)
+      ? await browser.newContext({
+          ...contextOptions,
+          storageState: "rubinot-state.json",
+        })
+      : await browser.newContext(contextOptions);
 
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
