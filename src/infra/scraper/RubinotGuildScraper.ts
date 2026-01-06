@@ -54,7 +54,7 @@ export class RubinotGuildScraper implements GuildScraper {
     return proxyString;
   }
 
-  private async humanDelay(page: Page, min = 1500, max = 3500): Promise<void> {
+  private async humanDelay(page: Page, min = 15000, max = 35000): Promise<void> {
     const delay = Math.random() * (max - min) + min;
     await page.waitForTimeout(delay);
   }
@@ -107,7 +107,7 @@ export class RubinotGuildScraper implements GuildScraper {
 
   private async waitForCloudflare(
     page: Page,
-    timeoutMs = 30000
+    timeoutMs = 60000
   ): Promise<boolean> {
     const start = Date.now();
 
@@ -124,7 +124,7 @@ export class RubinotGuildScraper implements GuildScraper {
       }
 
       log("⏳ Aguardando Cloudflare (guild)...");
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(20000);
     }
 
     return false;
@@ -141,11 +141,11 @@ export class RubinotGuildScraper implements GuildScraper {
 
     try {
       await page.goto(url, {
-        waitUntil: "networkidle",
-        timeout: 60000,
+        waitUntil: "domcontentloaded",
+        timeout: 120000,
       });
 
-      await this.humanDelay(page, 1000, 2000);
+      await this.humanDelay(page, 10000, 20000);
 
       const { isBlocked, isPermanent } = await this.detectCloudflare(page);
 
