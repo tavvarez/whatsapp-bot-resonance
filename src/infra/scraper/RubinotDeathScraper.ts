@@ -69,9 +69,10 @@ export class RubinotDeathScraper implements DeathScraper {
   private async submitForm(page: Page, world: string, guild: string): Promise<void> {
     // Passo 1: Navega para a página
     await page.goto('https://rubinot.com.br/?subtopic=latestdeaths', {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle',
       timeout: 70000
     })
+    await page.waitForTimeout(2000)
 
     // Verifica Cloudflare e espera passar
     if (await this.detectCloudflare(page)) {
@@ -81,38 +82,102 @@ export class RubinotDeathScraper implements DeathScraper {
       if (!passed) {
         throw new CloudflareBlockedError()
       }
+      await page.waitForTimeout(2000)
     }
 
     await this.humanDelay(page)
 
-    // Passo 2: Seleciona o World e faz o primeiro submit
-    await page.waitForSelector('select[name="world"]', {
-      state: 'visible',
-      timeout: 120000
-    })
+    const worldSelectors = [
+      'select[name="world"]',
+      'select[name="size"]',
+    ]
+
+    let worldSelector = null
+    for (const selector of worldSelectors) {
+      try {
+        await page.waitForSelector(selector, { state: 'visible', timeout: 5000 })
+        worldSelector = selector
+        break
+      } catch {
+        continue
+      }
+    }
     
+    if (!worldSelector) {
+      // Debug: loga o HTML da página para diagnóstico
+      const html = await page.content()
+      log(`❌ Selector de world não encontrado. HTML (primeiros 2000 chars): ${html.slice(0, 2000)}`)
+      throw new ScraperError('Não foi possível encontrar o seletor de world')
+    }
+    
+    log(`✅ Usando seletor: ${worldSelector}`)
     await this.humanDelay(page)
-    await page.selectOption('select[name="world"]', world)
+    await page.selectOption(worldSelector, world)
     await this.humanDelay(page)
 
     // Primeiro submit
     await page.click('input.BigButtonText[type="submit"]')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle') // Muda para networkidle
     await this.humanDelay(page)
 
     // Passo 3: Agora seleciona a Guild e faz o segundo submit
-    await page.waitForSelector('select[name="guild"]', {
-      state: 'visible',
-      timeout: 120000
-    })
+    const guildSelectors = [
+      'select[name="guild"]',
+      'select#guild'
+    ]
     
+    let guildSelector = null
+    for (const selector of guildSelectors) {
+      try {
+        await page.waitForSelector(selector, { state: 'visible', timeout: 5000 })
+        guildSelector = selector
+        break
+      } catch {
+        continue
+      }
+    }
+    
+    if (!guildSelector) {
+      throw new ScraperError('Não foi possível encontrar o seletor de guild')
+    }
+    
+    log(`✅ Usando seletor: ${guildSelector}`)
     await this.humanDelay(page)
-    await page.selectOption('select[name="guild"]', guild)
+    await page.selectOption(guildSelector, guild)
     await this.humanDelay(page)
 
     // Espera a tabela de deaths aparecer
     await page.waitForSelector('table.TableContent', { timeout: 120000 })
   }
+
+  //   // Passo 2: Seleciona o World e faz o primeiro submit
+  //   await page.waitForSelector('select[name="world"]', {
+  //     state: 'visible',
+  //     timeout: 120000
+  //   })
+    
+  //   await this.humanDelay(page)
+  //   await page.selectOption('select[name="world"]', world)
+  //   await this.humanDelay(page)
+
+  //   // Primeiro submit
+  //   await page.click('input.BigButtonText[type="submit"]')
+  //   await page.waitForLoadState('domcontentloaded')
+  //   await this.humanDelay(page)
+
+  //   // Passo 3: Agora seleciona a Guild e faz o segundo submit
+  //   await page.waitForSelector('select[name="guild"]', {
+  //     state: 'visible',
+  //     timeout: 120000
+  //   })
+    
+  //   await this.humanDelay(page)
+  //   await page.selectOption('select[name="guild"]', guild)
+  //   await this.humanDelay(page)
+
+  //   // Espera a tabela de deaths aparecer
+  //   await page.waitForSelector('table.TableContent', { timeout: 120000 })
+  // }
 
   private async doFetch(
     context: BrowserContext,
@@ -160,9 +225,10 @@ export class RubinotDeathScraper implements DeathScraper {
   
     const fs = await import('node:fs/promises')
     let hasStorageState = false
+    const statePath = 'rubinot-state.json'
     
     try {
-      await fs.access('rubinot-state.json')
+      await fs.access(statePath)
       hasStorageState = true
       log('📂 Usando sessão salva do Rubinot')
     } catch {
@@ -196,6 +262,14 @@ export class RubinotDeathScraper implements DeathScraper {
           log(`🔄 Tentativa ${attempt}/${maxRetries}...`)
   
           const deaths = await this.doFetch(context, world, guild)
+
+          try {
+            await context.storageState({ path: statePath })
+            log('💾 Estado da sessão salvo/atualizado')
+          } catch (error) {
+            log(`⚠️ Não foi possível salvar estado: ${error}`)
+            // Não falha o processo se não conseguir salvar
+          }
   
           log(`✅ Sucesso! ${deaths.length} mortes encontradas.`)
           return deaths
