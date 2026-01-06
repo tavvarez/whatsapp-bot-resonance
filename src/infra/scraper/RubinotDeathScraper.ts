@@ -63,7 +63,9 @@ export class RubinotDeathScraper implements DeathScraper {
     ];
 
     const pageContent = await page.content();
+    console.log("Page Content", pageContent)
     const pageTitle = await page.title();
+    console.log("Page Title", pageTitle)
 
     return cloudflareIndicators.some(
       (indicator) =>
@@ -98,10 +100,28 @@ export class RubinotDeathScraper implements DeathScraper {
     guild: string
   ): Promise<void> {
     // Passo 1: Navega para a página
-    await page.goto("https://rubinot.com.br/?subtopic=latestdeaths&world=18&guild=Genesis", {
+    page.on("response", async (response) => {
+      if (response.url().includes("rubinot")) {
+        console.log(
+          "📡 RESPONSE",
+          response.status(),
+          response.url()
+        );
+      }
+    });
+    await page.goto("https://rubinot.com.br/?subtopic=latestdeaths", {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
+
+    // 🔴 LOG CRÍTICO
+    const url = page.url();
+    const title = await page.title();
+    const html = await page.content();
+
+    console.log("🌐 URL atual:", url);
+    console.log("📄 Title:", title);
+    console.log("📄 HTML length:", html.length);
 
     // Verifica Cloudflare e espera passar
     if (await this.detectCloudflare(page)) {
