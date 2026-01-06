@@ -217,23 +217,54 @@ export class RubinotDeathScraper implements DeathScraper {
       log("📂 Nenhuma sessão salva, iniciando nova");
     }
 
-    // Prepara opções de proxy
+    // Prepara opções de proxy (formato correto para Playwright + IPRoyal)
     const proxyServer = config.scraper.proxyServer.trim();
-    const normalizedProxyUrl = proxyServer
-      ? this.normalizeProxyUrl(proxyServer)
-      : undefined;
-    const proxyConfig = normalizedProxyUrl
-      ? { server: normalizedProxyUrl }
-      : undefined;
 
-    if (proxyConfig) {
-      const maskedProxy = proxyConfig.server.replace(/:[^:@]+@/, ":****@");
-      log(`🌐 Usando proxy: ${maskedProxy}`);
+    type ProxyConfig = {
+      server: string;
+      username: string;
+      password: string;
+    };
+
+    let proxyConfig: ProxyConfig | undefined;
+
+    if (proxyServer) {
+      // Formato esperado: user:pass:host:port
+      const parts = proxyServer.split(":");
+
+      if (
+        parts.length !== 4 ||
+        !parts[0] ||
+        !parts[1] ||
+        !parts[2] ||
+        !parts[3]
+      ) {
+        throw new Error(
+          "Formato de proxy inválido. Use user:pass:host:port"
+        );
+      }
+      
+      const username: string = parts[0];
+      const password: string = parts[1];
+      const host: string = parts[2];
+      const port: string = parts[3];
+
+      proxyConfig = {
+        server: `http://${host}:${port}`,
+        username,
+        password,
+      };
+
+      log(`🌐 Usando proxy: ${host}:${port} (auth via username/password)`);
     } else {
       log("🌐 Rodando sem proxy");
     }
 
-    // Constrói contextOptions base
+    if (proxyConfig) {
+      console.log("🔐 Proxy server:", proxyConfig.server);
+      console.log("🔐 Proxy user:", proxyConfig.username);
+    }
+
     const contextOptionsBase = {
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -244,7 +275,6 @@ export class RubinotDeathScraper implements DeathScraper {
       permissions: ["geolocation"],
     };
 
-    // Adiciona proxy apenas se configurado
     const contextOptions = proxyConfig
       ? { ...contextOptionsBase, proxy: proxyConfig }
       : contextOptionsBase;
