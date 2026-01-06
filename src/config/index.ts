@@ -81,7 +81,7 @@ export const config = {
     /** Delay base entre tentativas (em ms) */
     retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 10000),
 
-    /** Proxy server (opcional) - formato: user:pass:host:port ou http://user:pass@host:port */
+    /** Proxy server (opcional) - formato: user:pass:host:port */
     proxyServer: getEnvOrDefault('PROXY_SERVER', '')
   }
 } as const
