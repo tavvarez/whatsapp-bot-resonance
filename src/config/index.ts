@@ -85,6 +85,9 @@ export const config = {
     retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 15000),
     
     /** Cooldown após bloqueio do Cloudflare (em ms) - padrão 1 hora */
-    cloudflareCooldownMs: getEnvNumberOrDefault('CLOUDFLARE_COOLDOWN_MS', 60 * 60 * 1000)
+    cloudflareCooldownMs: getEnvNumberOrDefault('CLOUDFLARE_COOLDOWN_MS', 60 * 60 * 1000),
+    
+    /** Proxy server (opcional) - formato: http://user:pass@host:port ou http://host:port */
+    proxyServer: getEnvOrDefault('PROXY_SERVER', '')
   }
 } as const
