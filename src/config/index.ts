@@ -90,10 +90,15 @@ export const config = {
    */
   scraper: {
     /** Número máximo de tentativas */
-    maxRetries: getEnvNumberOrDefault("SCRAPER_MAX_RETRIES", 5),
+    maxRetries: getEnvNumberOrDefault('SCRAPER_MAX_RETRIES', 5),
+    
+    /** Delay base entre tentativas (em ms) */
+    retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 10000),
 
-    /** Delay base entre tentativas (em ms) - aumentado para 15s */
-    retryDelayMs: getEnvNumberOrDefault("SCRAPER_RETRY_DELAY_MS", 15000),
+    /** Proxy server (opcional) - formato: user:pass:host:port ou http://user:pass@host:port */
+    proxyServer: getEnvOrDefault('PROXY_SERVER', '')
+  }
+} as const
 
     /** Cooldown após bloqueio do Cloudflare (em ms) - padrão 1 hora */
     cloudflareCooldownMs: getEnvNumberOrDefault(

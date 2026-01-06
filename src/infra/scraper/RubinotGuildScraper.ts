@@ -1,31 +1,45 @@
-import { chromium } from "playwright-extra";
-import stealth from "puppeteer-extra-plugin-stealth";
-import type { Page, BrowserContext } from "playwright";
-import type {
-  GuildScraper,
-  GuildMember,
-  FetchMembersOptions,
-} from "../../domain/scrapers/GuildScraper.js";
-import { log } from "../../shared/utils/logger.js";
-import {
-  CloudflareBlockedError,
-  ScraperError,
-} from "../../shared/errors/index.js";
-import { config } from "../../config/index.js";
+import { chromium } from 'playwright-extra'
+import stealth from 'puppeteer-extra-plugin-stealth'
+import type { Page, BrowserContext } from 'playwright'
+import type { GuildScraper, GuildMember, FetchMembersOptions } from '../../domain/scrapers/GuildScraper.js'
+import { log } from '../../shared/utils/logger.js'
+import { CloudflareBlockedError, ScraperError } from '../../shared/errors/index.js'
+import { config } from '../../config/index.js'
 
-chromium.use(stealth());
+chromium.use(stealth())
 
 export class RubinotGuildScraper implements GuildScraper {
   private readonly baseUrl = "https://rubinot.com.br";
 
-  private readonly userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  ];
+  /**
+   * Converte o formato de proxy do IPRoyal (user:pass:host:port)
+   * para o formato do Playwright (http://user:pass@host:port)
+   */
+  private normalizeProxyUrl(proxyString: string): string {
+    // Se já está no formato http://, retorna como está
+    if (
+      proxyString.startsWith("http://") ||
+      proxyString.startsWith("https://")
+    ) {
+      return proxyString;
+    }
 
-  private getRandomUserAgent(): string {
-    return this.userAgents[Math.floor(Math.random() * this.userAgents.length)]!;
+    // Formato IPRoyal: user:pass:host:port
+    const parts = proxyString.split(":");
+
+    if (parts.length === 4) {
+      const [user, pass, host, port] = parts;
+      return `http://${user}:${pass}@${host}:${port}`;
+    }
+
+    // Se não conseguir parsear, retorna como está
+    log(`⚠️ Formato de proxy não reconhecido: ${proxyString}`);
+    return proxyString;
+  }
+
+  private async humanDelay(page: Page, min = 300, max = 800): Promise<void> {
+    const delay = Math.random() * (max - min) + min;
+    await page.waitForTimeout(delay);
   }
 
   /**
@@ -67,19 +81,7 @@ export class RubinotGuildScraper implements GuildScraper {
         .waitForLoadState("domcontentloaded", { timeout: 5000 })
         .catch(() => {});
 
-      const pageContent = await page.content();
-      const pageTitle = await page.title();
-
-      const permanentBlockIndicators = [
-        "Sorry, you have been blocked",
-        "Why have I been blocked?",
-        "You are unable to access",
-        "Attention Required! | Cloudflare",
-        "blocked_why_headline",
-        "block_headline",
-      ];
-
-      const challengeIndicators = [
+      const indicators = [
         "cf-browser-verification",
         "cf_chl_opt",
         "challenge-running",
@@ -87,44 +89,27 @@ export class RubinotGuildScraper implements GuildScraper {
         "Verify you are human",
       ];
 
-      const isPermanentBlock = permanentBlockIndicators.some(
-        (i) => pageContent.includes(i) || pageTitle.includes(i)
-      );
+      const content = await page.content();
+      const title = await page.title();
 
-      if (isPermanentBlock) {
-        return { isBlocked: true, isPermanent: true };
-      }
-
-      const isChallenge = challengeIndicators.some(
-        (i) => pageContent.includes(i) || pageTitle.includes(i)
-      );
-
-      return { isBlocked: isChallenge, isPermanent: false };
+      return indicators.some((i) => content.includes(i) || title.includes(i));
     } catch {
-      return { isBlocked: true, isPermanent: false };
+      return true;
     }
   }
 
   private async waitForCloudflare(
     page: Page,
-    timeoutMs = 60000
+    timeoutMs = 30000
   ): Promise<boolean> {
     const start = Date.now();
 
     while (Date.now() - start < timeoutMs) {
-      const { isBlocked, isPermanent } = await this.detectCloudflare(page);
-
-      if (isPermanent) {
-        log("🚫 Bloqueio permanente detectado (guild) - IP foi bloqueado");
-        return false;
-      }
-
-      if (!isBlocked) {
+      if (!(await this.detectCloudflare(page))) {
         return true;
       }
-
       log("⏳ Aguardando Cloudflare (guild)...");
-      await page.waitForTimeout(20000);
+      await page.waitForTimeout(2000);
     }
 
     return false;
@@ -141,24 +126,17 @@ export class RubinotGuildScraper implements GuildScraper {
 
     try {
       await page.goto(url, {
-        waitUntil: "domcontentloaded",
-        timeout: 120000,
+        waitUntil: "networkidle",
+        timeout: 60000,
       });
 
-      await this.humanDelay(page, 10000, 20000);
+      await this.humanDelay(page, 1000, 2000);
 
-      const { isBlocked, isPermanent } = await this.detectCloudflare(page);
-
-      if (isBlocked) {
-        if (isPermanent) {
-          log("🚫 IP bloqueado permanentemente (guild)");
+      if (await this.detectCloudflare(page)) {
+        log("🛡️ Cloudflare detectado (guild)...");
+        const passed = await this.waitForCloudflare(page);
+        if (!passed) {
           throw new CloudflareBlockedError();
-        } else {
-          log("🛡️ Cloudflare detectado (guild)...");
-          const passed = await this.waitForCloudflare(page);
-          if (!passed) {
-            throw new CloudflareBlockedError();
-          }
         }
       }
 
@@ -213,7 +191,7 @@ export class RubinotGuildScraper implements GuildScraper {
     guildName: string,
     options: FetchMembersOptions = {}
   ): Promise<GuildMember[]> {
-    const { maxRetries = 5, retryDelayMs = 15000 } = options;
+    const { maxRetries = 5, retryDelayMs = 10000 } = options;
 
     log(`🔍 Buscando membros da guild: ${guildName}`);
 
@@ -224,50 +202,37 @@ export class RubinotGuildScraper implements GuildScraper {
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process",
       ],
     });
 
-    // Prepara opções de proxy - NORMALIZA o formato
-    const proxyServer = config.scraper.proxyServer.trim();
-    const normalizedProxyUrl = proxyServer
-      ? this.normalizeProxyUrl(proxyServer)
-      : undefined;
+    // Prepara opções de proxy
+    const proxyServer = config.scraper.proxyServer.trim()
+    const normalizedProxyUrl = proxyServer ? this.normalizeProxyUrl(proxyServer) : undefined
     const proxyConfig = normalizedProxyUrl
       ? { server: normalizedProxyUrl }
-      : undefined;
+      : undefined
 
     if (proxyConfig) {
-      // Esconde senha no log (agora já está no formato http://)
-      const maskedProxy = proxyConfig.server.replace(/:[^:@]+@/, ":****@");
-      log(`🌐 Usando proxy (guild): ${maskedProxy}`);
+      const maskedProxy = proxyConfig.server.replace(/:[^:@]+@/, ':****@')
+      log(`🌐 Usando proxy (guild): ${maskedProxy}`)
     } else {
-      log("🌐 Rodando sem proxy (guild)");
+      log('🌐 Rodando sem proxy (guild)')
     }
 
-    // Constrói contextOptions sem proxy primeiro
+    // Constrói contextOptions base
     const contextOptionsBase = {
-      userAgent: this.getRandomUserAgent(),
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },
-      locale: "pt-BR",
-      timezoneId: "America/Sao_Paulo",
-      extraHTTPHeaders: {
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "pt-BR,pt;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        DNT: "1",
-        Connection: "keep-alive",
-      },
-    };
+      locale: 'pt-BR',
+      timezoneId: 'America/Sao_Paulo'
+    }
 
     // Adiciona proxy apenas se configurado
     const contextOptions = proxyConfig
       ? { ...contextOptionsBase, proxy: proxyConfig }
-      : contextOptionsBase;
+      : contextOptionsBase
 
-    const context = await browser.newContext(contextOptions);
+    const context = await browser.newContext(contextOptions)
 
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -296,22 +261,9 @@ export class RubinotGuildScraper implements GuildScraper {
             );
           }
 
-          const baseDelay = retryDelayMs * Math.pow(2, attempt - 1);
-          const jitter = Math.random() * 0.3 * baseDelay;
-          const delay = baseDelay + jitter;
-
-          log(
-            `⏳ Aguardando ${Math.round(
-              delay / 1000
-            )}s antes da próxima tentativa...`
-          );
+          const delay = retryDelayMs * attempt;
+          log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
-
-          if (isCloudflareError) {
-            await context.close();
-            const newContext = await browser.newContext(contextOptions);
-            Object.assign(context, newContext);
-          }
         }
       }
 
