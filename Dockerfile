@@ -12,6 +12,9 @@ RUN npm ci
 # Copia o código fonte
 COPY . .
 
+# remove cache
+RUN rm -rf node_modules/.cache
+
 # Compila TypeScript
 RUN npm run build
 
