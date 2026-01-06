@@ -42,7 +42,40 @@ export class RubinotGuildScraper implements GuildScraper {
     await page.waitForTimeout(delay);
   }
 
-  private async detectCloudflare(page: Page): Promise<boolean> {
+  /**
+   * Converte o formato de proxy do IPRoyal (user:pass:host:port)
+   * para o formato do Playwright (http://user:pass@host:port)
+   */
+  private normalizeProxyUrl(proxyString: string): string {
+    // Se já está no formato http://, retorna como está
+    if (
+      proxyString.startsWith("http://") ||
+      proxyString.startsWith("https://")
+    ) {
+      return proxyString;
+    }
+
+    // Formato IPRoyal: user:pass:host:port
+    const parts = proxyString.split(":");
+
+    if (parts.length === 4) {
+      const [user, pass, host, port] = parts;
+      return `http://${user}:${pass}@${host}:${port}`;
+    }
+
+    // Se não conseguir parsear, retorna como está (pode dar erro depois)
+    log(`⚠️ Formato de proxy não reconhecido: ${proxyString}`);
+    return proxyString;
+  }
+
+  private async humanDelay(page: Page, min = 15000, max = 35000): Promise<void> {
+    const delay = Math.random() * (max - min) + min;
+    await page.waitForTimeout(delay);
+  }
+
+  private async detectCloudflare(
+    page: Page
+  ): Promise<{ isBlocked: boolean; isPermanent: boolean }> {
     try {
       await page
         .waitForLoadState("domcontentloaded", { timeout: 5000 })

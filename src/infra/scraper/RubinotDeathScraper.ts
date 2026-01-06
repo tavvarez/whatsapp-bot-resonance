@@ -9,7 +9,7 @@ import { CloudflareBlockedError, ParseError, ScraperError } from '../../shared/e
 import { config } from '../../config/index.js'
 
 // Aplica o plugin stealth para evitar detecção
-chromium.use(stealth())
+chromium.use(stealth());
 
 export class RubinotDeathScraper implements DeathScraper {
   private async humanDelay(page: Page, min = 500, max = 1500): Promise<void> {
