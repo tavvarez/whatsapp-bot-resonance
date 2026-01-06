@@ -75,7 +75,7 @@ export class RubinotGuildScraper implements GuildScraper {
         timeout: 60000
       })
 
-      await this.humanDelay(page, 1000, 2000)
+      await this.humanDelay(page, 10000, 20000)
 
       if (await this.detectCloudflare(page)) {
         log('🛡️ Cloudflare detectado (guild)...')
@@ -87,7 +87,7 @@ export class RubinotGuildScraper implements GuildScraper {
 
       await this.humanDelay(page)
 
-      await page.waitForSelector('table.TableContent', { timeout: 30000 })
+      await page.waitForSelector('table.TableContent', { timeout: 120000 })
 
       const members = await page.$$eval('table.TableContent tr', (rows) => {
         const result: Array<{ playerName: string; level: number; vocation: string; isOnline: boolean }> = []
@@ -127,7 +127,7 @@ export class RubinotGuildScraper implements GuildScraper {
   }
 
   async fetchMembers(guildName: string, options: FetchMembersOptions = {}): Promise<GuildMember[]> {
-    const { maxRetries = 5, retryDelayMs = 15000 } = options // Aumentado para 15s base
+    const { maxRetries = 5, retryDelayMs = 20000 } = options // Aumentado para 15s base
     
     log(`🔍 Buscando membros da guild: ${guildName}`)
 
