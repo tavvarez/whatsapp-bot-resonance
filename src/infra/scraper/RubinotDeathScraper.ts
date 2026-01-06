@@ -20,7 +20,7 @@ import { config } from "../../config/index.js";
 chromium.use(stealth());
 
 export class RubinotDeathScraper implements DeathScraper {
-  private async humanDelay(page: Page, min = 10000, max = 30000): Promise<void> {
+  private async humanDelay(page: Page, min = 1000, max = 3000): Promise<void> {
     const delay = Math.random() * (max - min) + min;
     await page.waitForTimeout(delay);
   }
@@ -110,7 +110,7 @@ export class RubinotDeathScraper implements DeathScraper {
 
   private async waitForCloudflareToPass(
     page: Page,
-    timeoutMs = 450000
+    timeoutMs = 45000
   ): Promise<boolean> {
     const startTime = Date.now();
 
@@ -142,10 +142,10 @@ export class RubinotDeathScraper implements DeathScraper {
     guild: string
   ): Promise<void> {
     await page.goto("https://rubinot.com.br/?subtopic=latestdeaths", {
-      waitUntil: "domcontentloaded",
-      timeout: 120000,
+      waitUntil: "networkidle",
+      timeout: 70000,
     });
-    await page.waitForTimeout(20000);
+    await page.waitForTimeout(2000);
 
     const { isBlocked, isPermanent } = await this.detectCloudflare(page);
 
