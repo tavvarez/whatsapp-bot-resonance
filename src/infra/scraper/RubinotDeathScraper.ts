@@ -208,112 +208,154 @@ export class RubinotDeathScraper implements DeathScraper {
     { world, guild }: FetchDeathsParams,
     options: FetchDeathsOptions = {}
   ): Promise<DeathEvent[]> {
-    const { maxRetries = 5, retryDelayMs = 15000 } = options
-  
+    const { maxRetries = 5, retryDelayMs = 15000 } = options;
+
     const browser = await chromium.launch({
       headless: true,
       args: [
-        '--disable-blink-features=AutomationControlled',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-site-isolation-trials'
-      ]
-    })
-  
-    const fs = await import('node:fs/promises')
-    let hasStorageState = false
-    const statePath = 'rubinot-state.json'
-    
+        "--disable-blink-features=AutomationControlled",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process",
+        "--disable-site-isolation-trials",
+      ],
+    });
+
+    const fs = await import("node:fs/promises");
+    let hasStorageState = false;
+    const statePath = "rubinot-state.json";
+
     try {
-      await fs.access(statePath)
-      hasStorageState = true
-      log('📂 Usando sessão salva do Rubinot')
+      await fs.access(statePath);
+      hasStorageState = true;
+      log("📂 Usando sessão salva do Rubinot");
     } catch {
-      log('📂 Nenhuma sessão salva, iniciando nova')
+      log("📂 Nenhuma sessão salva, iniciando nova");
     }
-  
+
     const contextOptions = {
       userAgent: this.getRandomUserAgent(),
       viewport: { width: 1920, height: 1080 },
-      locale: 'pt-BR',
-      timezoneId: 'America/Sao_Paulo',
+      locale: "pt-BR",
+      timezoneId: "America/Sao_Paulo",
       geolocation: { latitude: -23.5509, longitude: -46.6333 },
-      permissions: ['geolocation'],
+      permissions: ["geolocation"],
       extraHTTPHeaders: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      }
-    }
-  
-    const context = hasStorageState
-      ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
-      : await browser.newContext(contextOptions)
-  
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        DNT: "1",
+        Connection: "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+      },
+    };
+
+    let context = hasStorageState
+      ? await browser.newContext({
+          ...contextOptions,
+          storageState: "rubinot-state.json",
+        })
+      : await browser.newContext(contextOptions);
+
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          log(`🔄 Tentativa ${attempt}/${maxRetries}...`)
-  
-          const deaths = await this.doFetch(context, world, guild)
+          log(`🔄 Tentativa ${attempt}/${maxRetries}...`);
+
+          const deaths = await this.doFetch(context, world, guild);
 
           try {
-            await context.storageState({ path: statePath })
-            log('💾 Estado da sessão salvo/atualizado')
+            await context.storageState({ path: statePath });
+            log("💾 Estado da sessão salvo/atualizado");
           } catch (error) {
-            log(`⚠️ Não foi possível salvar estado: ${error}`)
+            log(`⚠️ Não foi possível salvar estado: ${error}`);
             // Não falha o processo se não conseguir salvar
           }
-  
-          log(`✅ Sucesso! ${deaths.length} mortes encontradas.`)
-          return deaths
+
+          log(`✅ Sucesso! ${deaths.length} mortes encontradas.`);
+          return deaths;
         } catch (error) {
-          const isCloudflareError = error instanceof CloudflareBlockedError
+          const isCloudflareError = error instanceof CloudflareBlockedError;
 
           console.warn(
             `⚠️ Tentativa ${attempt} falhou:`,
-            isCloudflareError ? 'Cloudflare bloqueou' : error
-          )
+            isCloudflareError ? "Cloudflare bloqueou" : error
+          );
 
           if (attempt === maxRetries) {
             if (isCloudflareError) {
               // Quando Cloudflare bloqueia todas as tentativas, lança erro especial
               // que será tratado no job para pausar por 1 hora
-              throw error
+              throw error;
             }
-            throw new ScraperError('Todas as tentativas de scraping falharam', error)
+            throw new ScraperError(
+              "Todas as tentativas de scraping falharam",
+              error
+            );
           }
-  
-          // Backoff exponencial com jitter aleatório
-          const baseDelay = retryDelayMs * Math.pow(2, attempt - 1)
-          const jitter = Math.random() * 0.3 * baseDelay
-          const delay = baseDelay + jitter
 
-          log(`⏳ Aguardando ${Math.round(delay / 1000)}s antes da próxima tentativa...`)
-          await new Promise(resolve => setTimeout(resolve, delay))
-          
-          // Se foi Cloudflare, fecha e recria o contexto para "resetar" a sessão
+          // Backoff exponencial com jitter aleatório
+          const baseDelay = retryDelayMs * Math.pow(2, attempt - 1);
+          const jitter = Math.random() * 0.3 * baseDelay;
+          const delay = baseDelay + jitter;
+
+          log(
+            `⏳ Aguardando ${Math.round(
+              delay / 1000
+            )}s antes da próxima tentativa...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+
+          // Se foi Cloudflare, limpa cookies e recria contexto
           if (isCloudflareError) {
-            await context.close()
-            const newContext = hasStorageState
-              ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
-              : await browser.newContext(contextOptions)
-            Object.assign(context, newContext)
+            log("🧹 Limpando cookies e recriando contexto...");
+
+            try {
+              // Limpa cookies do domínio rubinot.com.br
+              await context.clearCookies();
+              log("✅ Cookies limpos do contexto");
+            } catch (clearError) {
+              log(`⚠️ Erro ao limpar cookies: ${clearError}`);
+            }
+
+            // Fecha o contexto atual
+            await context.close();
+
+            // Tenta deletar o arquivo de storage state se existir
+            try {
+              await fs.unlink(statePath);
+              log("🗑️ Arquivo de storage state deletado");
+              hasStorageState = false;
+            } catch (unlinkError) {
+              // Ignora se o arquivo não existir
+              log("ℹ️ Storage state não encontrado ou já foi deletado");
+            }
+
+            // Cria um novo contexto SEM storage state (fresh start)
+            context = await browser.newContext(contextOptions);
+            log("🆕 Novo contexto criado sem cookies");
+
+            // Se foi Cloudflare, fecha e recria o contexto para "resetar" a sessão
+            // if (isCloudflareError) {
+            //   await context.close()
+            //   const newContext = hasStorageState
+            //     ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
+            //     : await browser.newContext(contextOptions)
+            //   Object.assign(context, newContext)
+            // }
           }
         }
       }
-  
-      throw new ScraperError('Todas as tentativas falharam')
+
+      throw new ScraperError("Todas as tentativas falharam");
     } finally {
-      await browser.close()
+      await browser.close();
     }
   }
+
 
   private parseRow(rawText: string, world: string, guild: string): DeathEvent {
     const normalized = rawText.replace(/\s+/g, ' ').trim()
