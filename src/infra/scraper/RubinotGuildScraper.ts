@@ -37,6 +37,29 @@ export class RubinotGuildScraper implements GuildScraper {
     return proxyString;
   }
 
+  /**
+   * Converte o formato de proxy do IPRoyal (user:pass:host:port) 
+   * para o formato do Playwright (http://user:pass@host:port)
+   */
+  private normalizeProxyUrl(proxyString: string): string {
+    // Se já está no formato http://, retorna como está
+    if (proxyString.startsWith('http://') || proxyString.startsWith('https://')) {
+      return proxyString
+    }
+
+    // Formato IPRoyal: user:pass:host:port
+    const parts = proxyString.split(':')
+    
+    if (parts.length === 4) {
+      const [user, pass, host, port] = parts
+      return `http://${user}:${pass}@${host}:${port}`
+    }
+
+    // Se não conseguir parsear, retorna como está
+    log(`⚠️ Formato de proxy não reconhecido: ${proxyString}`)
+    return proxyString
+  }  
+
   private async humanDelay(page: Page, min = 300, max = 800): Promise<void> {
     const delay = Math.random() * (max - min) + min;
     await page.waitForTimeout(delay);
@@ -223,9 +246,14 @@ export class RubinotGuildScraper implements GuildScraper {
     const contextOptionsBase = {
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },
-      locale: 'pt-BR',
-      timezoneId: 'America/Sao_Paulo'
-    }
+      locale: "pt-BR",
+      timezoneId: "America/Sao_Paulo",
+    };
+
+    // Adiciona proxy apenas se configurado
+    const contextOptions = proxyConfig
+      ? { ...contextOptionsBase, proxy: proxyConfig }
+      : contextOptionsBase;
 
     // Adiciona proxy apenas se configurado
     const contextOptions = proxyConfig
