@@ -53,10 +53,10 @@ export const config = {
    */
   jobs: {
     /** Intervalo entre execuções do job de mortes (em ms) - padrão 7 min */
-    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 7 * 60 * 1000),
+    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 10 * 60 * 1000),
     
     /** Intervalo entre execuções do job de level up (em ms) - padrão 10 min */
-    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 10 * 60 * 1000),
+    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 15 * 60 * 1000),
     
     /** Quantas mortes consecutivas já existentes para parar de verificar */
     duplicateThreshold: getEnvNumberOrDefault('DUPLICATE_THRESHOLD', 2),
@@ -79,7 +79,7 @@ export const config = {
     maxRetries: getEnvNumberOrDefault('SCRAPER_MAX_RETRIES', 5),
     
     /** Delay base entre tentativas (em ms) */
-    retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 10000)
+    retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 15000)
   }
 } as const
 

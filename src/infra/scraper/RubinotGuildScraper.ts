@@ -10,10 +10,25 @@ chromium.use(stealth())
 export class RubinotGuildScraper implements GuildScraper {
   private readonly baseUrl = 'https://rubinot.com.br'
 
-  private async humanDelay(page: Page, min = 300, max = 800): Promise<void> {
+  private readonly userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  ]
+
+  private getRandomUserAgent(): string {
+    return this.userAgents[Math.floor(Math.random() * this.userAgents.length)]!
+  }
+
+  private async humanDelay(page: Page, min = 1500, max = 3500): Promise<void> {
     const delay = Math.random() * (max - min) + min
     await page.waitForTimeout(delay)
   }
+
+  // private async humanDelay(page: Page, min = 300, max = 800): Promise<void> {
+  //   const delay = Math.random() * (max - min) + min
+  //   await page.waitForTimeout(delay)
+  // }
 
   private async detectCloudflare(page: Page): Promise<boolean> {
     try {
@@ -122,15 +137,24 @@ export class RubinotGuildScraper implements GuildScraper {
         '--disable-blink-features=AutomationControlled',
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
+        '--disable-dev-shm-usage',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process'
       ]
     })
 
     const contextOptions = {
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      userAgent: this.getRandomUserAgent(), // Rotaciona
       viewport: { width: 1920, height: 1080 },
       locale: 'pt-BR',
-      timezoneId: 'America/Sao_Paulo'
+      timezoneId: 'America/Sao_Paulo',
+      extraHTTPHeaders: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive'
+      }
     }
 
     const context = await browser.newContext(contextOptions)
@@ -159,9 +183,23 @@ export class RubinotGuildScraper implements GuildScraper {
             throw new ScraperError('Todas as tentativas de scraping da guild falharam', error)
           }
 
-          const delay = retryDelayMs * attempt
-          log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
+          // const delay = retryDelayMs * attempt
+          // log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
+          // await new Promise(resolve => setTimeout(resolve, delay))
+          
+          // Backoff exponencial com jitter
+          const baseDelay = retryDelayMs * Math.pow(2, attempt - 1)
+          const jitter = Math.random() * 0.3 * baseDelay
+          const delay = baseDelay + jitter
+          
+          log(`⏳ Aguardando ${Math.round(delay / 1000)}s antes da próxima tentativa...`)
           await new Promise(resolve => setTimeout(resolve, delay))
+          
+          if (isCloudflareError) {
+            await context.close()
+            const newContext = await browser.newContext(contextOptions)
+            Object.assign(context, newContext)
+          }
         }
       }
 
