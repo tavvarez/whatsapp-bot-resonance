@@ -21,8 +21,7 @@ export class RubinotDeathScraper implements DeathScraper {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
-    '*'
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
   ]
 
   private getRandomUserAgent(): string {
@@ -159,7 +158,6 @@ export class RubinotDeathScraper implements DeathScraper {
       ]
     })
   
-    // Verifica se o arquivo de estado existe
     const fs = await import('node:fs/promises')
     let hasStorageState = false
     
@@ -171,15 +169,13 @@ export class RubinotDeathScraper implements DeathScraper {
       log('📂 Nenhuma sessão salva, iniciando nova')
     }
   
-    // Cria contexto COM ou SEM storageState
     const contextOptions = {
-      userAgent: this.getRandomUserAgent(), // Rotaciona user agent
+      userAgent: this.getRandomUserAgent(),
       viewport: { width: 1920, height: 1080 },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
-      geolocation: { latitude: -23.5505, longitude: -46.6333 },
+      geolocation: { latitude: -23.5509, longitude: -46.6333 },
       permissions: ['geolocation'],
-      // Adiciona mais headers realistas
       extraHTTPHeaders: {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -189,15 +185,6 @@ export class RubinotDeathScraper implements DeathScraper {
         'Upgrade-Insecure-Requests': '1'
       }
     }
-    // const contextOptions = {
-    //   userAgent:
-    //     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    //   viewport: { width: 1920, height: 1080 },
-    //   locale: 'pt-BR',
-    //   timezoneId: 'America/Sao_Paulo',
-    //   geolocation: { latitude: -23.5505, longitude: -46.6333 },
-    //   permissions: ['geolocation']  // Removido "as const"
-    // }
   
     const context = hasStorageState
       ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
@@ -222,42 +209,31 @@ export class RubinotDeathScraper implements DeathScraper {
 
           if (attempt === maxRetries) {
             if (isCloudflareError) {
+              // Quando Cloudflare bloqueia todas as tentativas, lança erro especial
+              // que será tratado no job para pausar por 1 hora
               throw error
             }
             throw new ScraperError('Todas as tentativas de scraping falharam', error)
           }
   
-          // const delay = retryDelayMs * attempt
-          // log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
-          // await new Promise((resolve) => setTimeout(resolve, delay));
-
           // Backoff exponencial com jitter aleatório
-          const baseDelay = retryDelayMs * Math.pow(2, attempt - 1); // Exponencial: 15s, 30s, 60s, 120s...
-          const jitter = Math.random() * 0.3 * baseDelay; // Até 30% de variação aleatória
-          const delay = baseDelay + jitter;
+          const baseDelay = retryDelayMs * Math.pow(2, attempt - 1)
+          const jitter = Math.random() * 0.3 * baseDelay
+          const delay = baseDelay + jitter
 
-          log(
-            `⏳ Aguardando ${Math.round(
-              delay / 1000
-            )}s antes da próxima tentativa...`
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-
+          log(`⏳ Aguardando ${Math.round(delay / 1000)}s antes da próxima tentativa...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          
           // Se foi Cloudflare, fecha e recria o contexto para "resetar" a sessão
           if (isCloudflareError) {
-            await context.close();
+            await context.close()
             const newContext = hasStorageState
-              ? await browser.newContext({
-                  ...contextOptions,
-                  storageState: "rubinot-state.json",
-                })
-              : await browser.newContext(contextOptions);
-            Object.assign(context, newContext); // Substitui o contexto
+              ? await browser.newContext({ ...contextOptions, storageState: 'rubinot-state.json' })
+              : await browser.newContext(contextOptions)
+            Object.assign(context, newContext)
           }
         }
       }
-
-      
   
       throw new ScraperError('Todas as tentativas falharam')
     } finally {

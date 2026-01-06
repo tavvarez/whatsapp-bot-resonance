@@ -52,11 +52,11 @@ export const config = {
    * Configurações dos Jobs
    */
   jobs: {
-    /** Intervalo entre execuções do job de mortes (em ms) - padrão 7 min */
-    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 10 * 60 * 1000),
+    /** Intervalo entre execuções do job de mortes (em ms) - padrão 12 min */
+    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 12 * 60 * 1000),
     
-    /** Intervalo entre execuções do job de level up (em ms) - padrão 10 min */
-    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 15 * 60 * 1000),
+    /** Intervalo entre execuções do job de level up (em ms) - padrão 20 min */
+    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 20 * 60 * 1000),
     
     /** Quantas mortes consecutivas já existentes para parar de verificar */
     duplicateThreshold: getEnvNumberOrDefault('DUPLICATE_THRESHOLD', 2),
@@ -68,7 +68,10 @@ export const config = {
     notifyBatchSize: getEnvNumberOrDefault('NOTIFY_BATCH_SIZE', 10),
     
     /** Delay entre mensagens em batch (em ms) */
-    notifyBatchDelayMs: getEnvNumberOrDefault('NOTIFY_BATCH_DELAY_MS', 1000)
+    notifyBatchDelayMs: getEnvNumberOrDefault('NOTIFY_BATCH_DELAY_MS', 1000),
+    
+    /** Jitter aleatório máximo para intervalos (em ms) - adiciona até 3 min de variação */
+    intervalJitterMs: getEnvNumberOrDefault('JOB_INTERVAL_JITTER_MS', 3 * 60 * 1000)
   },
 
   /**
@@ -78,8 +81,10 @@ export const config = {
     /** Número máximo de tentativas */
     maxRetries: getEnvNumberOrDefault('SCRAPER_MAX_RETRIES', 5),
     
-    /** Delay base entre tentativas (em ms) */
-    retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 15000)
+    /** Delay base entre tentativas (em ms) - aumentado para 15s */
+    retryDelayMs: getEnvNumberOrDefault('SCRAPER_RETRY_DELAY_MS', 15000),
+    
+    /** Cooldown após bloqueio do Cloudflare (em ms) - padrão 1 hora */
+    cloudflareCooldownMs: getEnvNumberOrDefault('CLOUDFLARE_COOLDOWN_MS', 60 * 60 * 1000)
   }
 } as const
-

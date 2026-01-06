@@ -13,8 +13,7 @@ export class RubinotGuildScraper implements GuildScraper {
   private readonly userAgents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    '*'
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   ]
 
   private getRandomUserAgent(): string {
@@ -128,7 +127,7 @@ export class RubinotGuildScraper implements GuildScraper {
   }
 
   async fetchMembers(guildName: string, options: FetchMembersOptions = {}): Promise<GuildMember[]> {
-    const { maxRetries = 5, retryDelayMs = 10000 } = options
+    const { maxRetries = 5, retryDelayMs = 15000 } = options // Aumentado para 15s base
     
     log(`🔍 Buscando membros da guild: ${guildName}`)
 
@@ -145,7 +144,7 @@ export class RubinotGuildScraper implements GuildScraper {
     })
 
     const contextOptions = {
-      userAgent: this.getRandomUserAgent(), // Rotaciona
+      userAgent: this.getRandomUserAgent(),
       viewport: { width: 1920, height: 1080 },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
@@ -184,10 +183,6 @@ export class RubinotGuildScraper implements GuildScraper {
             throw new ScraperError('Todas as tentativas de scraping da guild falharam', error)
           }
 
-          // const delay = retryDelayMs * attempt
-          // log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`)
-          // await new Promise(resolve => setTimeout(resolve, delay))
-          
           // Backoff exponencial com jitter
           const baseDelay = retryDelayMs * Math.pow(2, attempt - 1)
           const jitter = Math.random() * 0.3 * baseDelay
