@@ -1,4 +1,4 @@
-import { ConfigError } from '../shared/errors/index.js'
+import { ConfigError } from "../shared/errors/index.js";
 
 /**
  * Configurações centralizadas da aplicação.
@@ -6,20 +6,22 @@ import { ConfigError } from '../shared/errors/index.js'
  */
 
 function getEnvOrThrow(key: string): string {
-  const value = process.env[key]
+  const value = process.env[key];
   if (!value) {
-    throw new ConfigError(`Variável de ambiente obrigatória não definida: ${key}`)
+    throw new ConfigError(
+      `Variável de ambiente obrigatória não definida: ${key}`
+    );
   }
-  return value
+  return value;
 }
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
-  return process.env[key] ?? defaultValue
+  return process.env[key] ?? defaultValue;
 }
 
 function getEnvNumberOrDefault(key: string, defaultValue: number): number {
-  const value = process.env[key]
-  return value ? Number(value) : defaultValue
+  const value = process.env[key];
+  return value ? Number(value) : defaultValue;
 }
 
 export const config = {
@@ -27,48 +29,60 @@ export const config = {
    * Configurações do Supabase
    */
   supabase: {
-    url: getEnvOrThrow('SUPABASE_URL'),
-    serviceRoleKey: getEnvOrThrow('SUPABASE_SERVICE_ROLE_KEY')
+    url: getEnvOrThrow("SUPABASE_URL"),
+    serviceRoleKey: getEnvOrThrow("SUPABASE_SERVICE_ROLE_KEY"),
   },
 
   /**
    * Configurações do WhatsApp
    */
   whatsapp: {
-    groupId: getEnvOrThrow('GROUP_ID'),
-    groupIdNotifyDeaths: getEnvOrThrow('GROUP_ID_NOTIFY_DEATHS'),
-    groupIdNotifyLevelUps: getEnvOrThrow('GROUP_ID_NOTIFY_LEVELUPS')
+    groupId: getEnvOrThrow("GROUP_ID"),
+    groupIdNotifyDeaths: getEnvOrThrow("GROUP_ID_NOTIFY_DEATHS"),
+    groupIdNotifyLevelUps: getEnvOrThrow("GROUP_ID_NOTIFY_LEVELUPS"),
   },
 
   /**
    * Configurações do jogo (Rubinot)
    */
   game: {
-    world: getEnvOrThrow('WORLD'),
-    guild: getEnvOrThrow('GUILD')
+    world: getEnvOrThrow("WORLD"),
+    guild: getEnvOrThrow("GUILD"),
   },
 
   /**
    * Configurações dos Jobs
    */
   jobs: {
-    /** Intervalo entre execuções do job de mortes (em ms) - padrão 7 min */
-    deathIntervalMs: getEnvNumberOrDefault('JOB_DEATH_INTERVAL_MS', 7 * 60 * 1000),
-    
-    /** Intervalo entre execuções do job de level up (em ms) - padrão 10 min */
-    levelUpIntervalMs: getEnvNumberOrDefault('JOB_LEVELUP_INTERVAL_MS', 10 * 60 * 1000),
-    
+    /** Intervalo entre execuções do job de mortes (em ms) - padrão 12 min */
+    deathIntervalMs: getEnvNumberOrDefault(
+      "JOB_DEATH_INTERVAL_MS",
+      12 * 60 * 1000
+    ),
+
+    /** Intervalo entre execuções do job de level up (em ms) - padrão 20 min */
+    levelUpIntervalMs: getEnvNumberOrDefault(
+      "JOB_LEVELUP_INTERVAL_MS",
+      20 * 60 * 1000
+    ),
+
     /** Quantas mortes consecutivas já existentes para parar de verificar */
-    duplicateThreshold: getEnvNumberOrDefault('DUPLICATE_THRESHOLD', 2),
-    
+    duplicateThreshold: getEnvNumberOrDefault("DUPLICATE_THRESHOLD", 2),
+
     /** Máximo de mortes não notificadas para buscar por ciclo */
-    notifyLimit: getEnvNumberOrDefault('NOTIFY_LIMIT', 6),
-    
+    notifyLimit: getEnvNumberOrDefault("NOTIFY_LIMIT", 6),
+
     /** Quantas mortes por mensagem */
-    notifyBatchSize: getEnvNumberOrDefault('NOTIFY_BATCH_SIZE', 10),
-    
+    notifyBatchSize: getEnvNumberOrDefault("NOTIFY_BATCH_SIZE", 10),
+
     /** Delay entre mensagens em batch (em ms) */
-    notifyBatchDelayMs: getEnvNumberOrDefault('NOTIFY_BATCH_DELAY_MS', 1000)
+    notifyBatchDelayMs: getEnvNumberOrDefault("NOTIFY_BATCH_DELAY_MS", 1000),
+
+    /** Jitter aleatório máximo para intervalos (em ms) - adiciona até 3 min de variação */
+    intervalJitterMs: getEnvNumberOrDefault(
+      "JOB_INTERVAL_JITTER_MS",
+      3 * 60 * 1000
+    ),
   },
 
   /**
@@ -85,3 +99,14 @@ export const config = {
     proxyServer: getEnvOrDefault('PROXY_SERVER', '')
   }
 } as const
+
+    /** Cooldown após bloqueio do Cloudflare (em ms) - padrão 1 hora */
+    cloudflareCooldownMs: getEnvNumberOrDefault(
+      "CLOUDFLARE_COOLDOWN_MS",
+      60 * 60 * 1000
+    ),
+
+    /** Proxy server (opcional) - formato: http://user:pass@host:port ou http://host:port */
+    proxyServer: getEnvOrDefault("PROXY_SERVER", ""),
+  },
+} as const;

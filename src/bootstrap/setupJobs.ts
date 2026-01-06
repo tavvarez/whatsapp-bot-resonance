@@ -8,6 +8,15 @@ import { TrackLevelUpsJob } from '../app/jobs/TrackLevelUpsJob.js'
 import { container } from './container.js'
 import { config } from '../config/index.js'
 import { log, logError } from '../shared/utils/logger.js'
+import { CloudflareBlockedError } from '../shared/errors/index.js'
+
+/**
+ * Adiciona jitter aleatório ao intervalo para evitar padrões detectáveis
+ */
+function addJitter(baseIntervalMs: number): number {
+  const jitter = Math.random() * config.jobs.intervalJitterMs
+  return baseIntervalMs + jitter
+}
 
 /**
  * Cria e retorna a função que executa os jobs de morte.
@@ -33,6 +42,23 @@ export function createDeathJobsRunner() {
 
       log('✅ Ciclo de mortes finalizado')
     } catch (error) {
+      if (error instanceof CloudflareBlockedError) {
+        const cooldownMinutes = config.scraper.cloudflareCooldownMs / 60000
+        logError(`🛡️ Cloudflare bloqueou o scraper de mortes. Pausando por ${cooldownMinutes} minutos antes de tentar novamente.`, error)
+        
+        // Agenda próxima execução após cooldown
+        setTimeout(() => {
+          runDeathJobs()
+        }, config.scraper.cloudflareCooldownMs)
+        
+        // Agenda execução periódica normal após o cooldown
+        setTimeout(() => {
+          scheduleDeathJobs()
+        }, config.scraper.cloudflareCooldownMs)
+        
+        return // Não relança o erro, apenas pausa
+      }
+      
       logError('❌ Erro no ciclo de mortes:', error)
     }
   }
@@ -57,9 +83,70 @@ export function createLevelUpJobRunner() {
 
       log('✅ Verificação de level ups finalizada')
     } catch (error) {
+      if (error instanceof CloudflareBlockedError) {
+        const cooldownMinutes = config.scraper.cloudflareCooldownMs / 60000
+        logError(`🛡️ Cloudflare bloqueou o scraper de level ups. Pausando por ${cooldownMinutes} minutos antes de tentar novamente.`, error)
+        
+        // Agenda próxima execução após cooldown
+        setTimeout(() => {
+          runLevelUpJob()
+        }, config.scraper.cloudflareCooldownMs)
+        
+        // Agenda execução periódica normal após o cooldown
+        setTimeout(() => {
+          scheduleLevelUpJobs()
+        }, config.scraper.cloudflareCooldownMs)
+        
+        return // Não relança o erro, apenas pausa
+      }
+      
       logError('❌ Erro na verificação de level ups:', error)
     }
   }
+}
+
+/**
+ * Agenda execuções periódicas do job de mortes com jitter
+ */
+function scheduleDeathJobs(): void {
+  const runDeathJobs = createDeathJobsRunner()
+  
+  function scheduleNext(): void {
+    const intervalWithJitter = addJitter(config.jobs.deathIntervalMs)
+    const intervalMinutes = Math.round(intervalWithJitter / 60000)
+    
+    log(`⏰ Próxima execução de mortes em ~${intervalMinutes} minutos`)
+    
+    setTimeout(() => {
+      runDeathJobs().finally(() => {
+        scheduleNext() // Agenda próxima execução após terminar
+      })
+    }, intervalWithJitter)
+  }
+  
+  scheduleNext()
+}
+
+/**
+ * Agenda execuções periódicas do job de level ups com jitter
+ */
+function scheduleLevelUpJobs(): void {
+  const runLevelUpJob = createLevelUpJobRunner()
+  
+  function scheduleNext(): void {
+    const intervalWithJitter = addJitter(config.jobs.levelUpIntervalMs)
+    const intervalMinutes = Math.round(intervalWithJitter / 60000)
+    
+    log(`⏰ Próxima execução de level ups em ~${intervalMinutes} minutos`)
+    
+    setTimeout(() => {
+      runLevelUpJob().finally(() => {
+        scheduleNext() // Agenda próxima execução após terminar
+      })
+    }, intervalWithJitter)
+  }
+  
+  scheduleNext()
 }
 
 /**
@@ -73,20 +160,20 @@ export async function startScheduledJobs(): Promise<void> {
   // Executa jobs imediatamente (com delay entre eles)
   await runDeathJobs()
   
-  // Delay de 60s antes de rodar o job de level up
+  // Delay aumentado para 3 minutos antes de rodar o job de level up
   // Evita duas requisições simultâneas ao Rubinot
   setTimeout(async () => {
     await runLevelUpJob()
-  }, 60000)
+  }, 180000) // 3 minutos
 
-  // Agenda execuções periódicas
-  setInterval(runDeathJobs, config.jobs.deathIntervalMs)
-  setInterval(runLevelUpJob, config.jobs.levelUpIntervalMs)
+  // Inicia agendamento periódico com jitter
+  scheduleDeathJobs()
+  scheduleLevelUpJobs()
 
   const deathMinutes = config.jobs.deathIntervalMs / 60000
   const levelUpMinutes = config.jobs.levelUpIntervalMs / 60000
   
   log(`⏰ Jobs agendados:`)
-  log(`   └ Mortes: a cada ${deathMinutes} minutos`)
-  log(`   └ Level ups: a cada ${levelUpMinutes} minutos`)
+  log(`   └ Mortes: a cada ~${deathMinutes} minutos (com jitter de até ${config.jobs.intervalJitterMs / 60000} min)`)
+  log(`   └ Level ups: a cada ~${levelUpMinutes} minutos (com jitter de até ${config.jobs.intervalJitterMs / 60000} min)`)
 }
