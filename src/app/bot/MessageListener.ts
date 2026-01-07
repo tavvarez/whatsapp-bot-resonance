@@ -21,12 +21,6 @@ export class MessageListener {
         msg.message?.extendedTextMessage?.text
 
       if (!text) return
-      console.log(msg.key.remoteJid)
-
-      if (isGroup) {
-        console.log('📌 GROUP ID:', jid)
-      }
-
 
       await this.parser.handle({
         text,

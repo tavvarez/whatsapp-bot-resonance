@@ -1,14 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { HuntedRepository, CreateHuntedInput, UpdateLevelInput } from '../../domain/repositories/HuntedRepository.js'
 import type { Hunted } from '../../domain/entities/Hunted.js'
 import { DatabaseError } from '../../shared/errors/index.js'
 import { normalizeText } from '../../shared/utils/normalizeText.js'
+import { getSupabaseClient } from './SupabaseClient.js'
 
 export class SupabaseHuntedRepository implements HuntedRepository {
-  private client = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  private client: SupabaseClient
+
+  constructor() {
+    this.client = getSupabaseClient()
+  }
 
   private getTodayDateString(): string {
     return new Date().toISOString().split('T')[0]!

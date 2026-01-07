@@ -1,93 +1,18 @@
-import { chromium } from "playwright-extra";
-import stealth from "puppeteer-extra-plugin-stealth";
-import type { Page, BrowserContext } from "playwright";
+import type { BrowserContext, Page } from "playwright";
 import type {
   GuildScraper,
   GuildMember,
   FetchMembersOptions,
 } from "../../domain/scrapers/GuildScraper.js";
-import { log } from "../../shared/utils/logger.js";
+import { logger } from "../../shared/utils/logger.js";
 import {
   CloudflareBlockedError,
   ScraperError,
 } from "../../shared/errors/index.js";
 import { config } from "../../config/index.js";
+import { BaseScraper } from "./BaseScraper.js";
 
-chromium.use(stealth());
-
-export class RubinotGuildScraper implements GuildScraper {
-  private readonly baseUrl = "https://rubinot.com.br";
-
-  /**
-   * Converte o formato de proxy do IPRoyal (user:pass:host:port)
-   * para o formato do Playwright (http://user:pass@host:port)
-   */
-  private normalizeProxyUrl(proxyString: string): string {
-    // Se já está no formato http://, retorna como está
-    if (
-      proxyString.startsWith("http://") ||
-      proxyString.startsWith("https://")
-    ) {
-      return proxyString;
-    }
-
-    // Formato IPRoyal: user:pass:host:port
-    const parts = proxyString.split(":");
-
-    if (parts.length === 4) {
-      const [user, pass, host, port] = parts;
-      return `http://${user}:${pass}@${host}:${port}`;
-    }
-
-    // Se não conseguir parsear, retorna como está
-    log(`⚠️ Formato de proxy não reconhecido: ${proxyString}`);
-    return proxyString;
-  }
-
-  private async humanDelay(page: Page, min = 300, max = 800): Promise<void> {
-    const delay = Math.random() * (max - min) + min;
-    await page.waitForTimeout(delay);
-  }
-
-  private async detectCloudflare(page: Page): Promise<boolean> {
-    try {
-      await page
-        .waitForLoadState("domcontentloaded", { timeout: 5000 })
-        .catch(() => {});
-
-      const indicators = [
-        "cf-browser-verification",
-        "cf_chl_opt",
-        "challenge-running",
-        "Just a moment...",
-        "Verify you are human",
-      ];
-
-      const content = await page.content();
-      const title = await page.title();
-
-      return indicators.some((i) => content.includes(i) || title.includes(i));
-    } catch {
-      return true;
-    }
-  }
-
-  private async waitForCloudflare(
-    page: Page,
-    timeoutMs = 30000
-  ): Promise<boolean> {
-    const start = Date.now();
-
-    while (Date.now() - start < timeoutMs) {
-      if (!(await this.detectCloudflare(page))) {
-        return true;
-      }
-      log("⏳ Aguardando Cloudflare (guild)...");
-      await page.waitForTimeout(2000);
-    }
-
-    return false;
-  }
+export class RubinotGuildScraper extends BaseScraper implements GuildScraper {
 
   private async doFetch(
     context: BrowserContext,
@@ -107,7 +32,7 @@ export class RubinotGuildScraper implements GuildScraper {
       await this.humanDelay(page, 1000, 2000);
 
       if (await this.detectCloudflare(page)) {
-        log("🛡️ Cloudflare detectado (guild)...");
+        logger.warn("🛡️ Cloudflare detectado (guild)...");
         const passed = await this.waitForCloudflare(page);
         if (!passed) {
           throw new CloudflareBlockedError();
@@ -167,65 +92,26 @@ export class RubinotGuildScraper implements GuildScraper {
   ): Promise<GuildMember[]> {
     const { maxRetries = 5, retryDelayMs = 10000 } = options;
 
-    log(`🔍 Buscando membros da guild: ${guildName}`);
+    logger.info(`🔍 Buscando membros da guild: ${guildName}`);
 
-    const browser = await chromium.launch({
-      headless: true,
-      args: [
-        "--disable-blink-features=AutomationControlled",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-    });
-
-    // Prepara opções de proxy
-    const proxyServer = config.scraper.proxyServer.trim();
-    const normalizedProxyUrl = proxyServer
-      ? this.normalizeProxyUrl(proxyServer)
-      : undefined;
-    const proxyConfig = normalizedProxyUrl
-      ? { server: normalizedProxyUrl }
-      : undefined;
-
-    if (proxyConfig) {
-      const maskedProxy = proxyConfig.server.replace(/:[^:@]+@/, ":****@");
-      log(`🌐 Usando proxy (guild): ${maskedProxy}`);
-    } else {
-      log("🌐 Rodando sem proxy (guild)");
-    }
-
-    // Constrói contextOptions base
-    const contextOptionsBase = {
-      userAgent:
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      viewport: { width: 1920, height: 1080 },
-      locale: "pt-BR",
-      timezoneId: "America/Sao_Paulo",
-    };
-
-    // Adiciona proxy apenas se configurado
-    const contextOptions = proxyConfig
-      ? { ...contextOptionsBase, proxy: proxyConfig }
-      : contextOptionsBase;
-
-    const context = await browser.newContext(contextOptions);
+    const browser = await this.createBrowser(true);
+    const context = await this.createContext(browser);
 
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          log(`🔄 Tentativa ${attempt}/${maxRetries} (guild)...`);
+          logger.info(`🔄 Tentativa ${attempt}/${maxRetries} (guild)...`);
 
           const members = await this.doFetch(context, guildName);
 
-          log(`✅ Sucesso! ${members.length} membros encontrados.`);
+          logger.success(`${members.length} membros encontrados.`);
           return members;
         } catch (error) {
           const isCloudflareError = error instanceof CloudflareBlockedError;
 
-          console.warn(
-            `⚠️ Tentativa ${attempt} falhou (guild):`,
-            isCloudflareError ? "Cloudflare bloqueou" : error
+          logger.warn(
+            `Tentativa ${attempt} falhou (guild): ${isCloudflareError ? "Cloudflare bloqueou" : "Erro desconhecido"}`,
+            isCloudflareError ? undefined : error
           );
 
           if (attempt === maxRetries) {
@@ -239,7 +125,7 @@ export class RubinotGuildScraper implements GuildScraper {
           }
 
           const delay = retryDelayMs * attempt;
-          log(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`);
+          logger.info(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
