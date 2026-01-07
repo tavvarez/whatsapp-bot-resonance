@@ -5,3 +5,7 @@ dist/
 package-lock.json
 auth/
 rubinot-state.json
+BROWSER_POOL_GUIDE.md
+COMO_USAR.md
+CLOUDFLARE_SOLUTIONS.md
+TESTE_REFATORACOES.md
