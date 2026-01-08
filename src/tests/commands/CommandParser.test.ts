@@ -1,15 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { CommandParser } from '../../app/commands/CommandParser.js'
 import type { Command, CommandContext } from '../../domain/commands/Command.js'
+import type { PermissionGuard } from '../../app/bot/PermissionGuard.js'
 
 // Mock do logger
 vi.mock('../../shared/utils/logger.js', () => ({
-  log: vi.fn(),
-  logError: vi.fn()
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn()
+  }
 }))
 
 describe('CommandParser', () => {
   let parser: CommandParser
+  let mockPermissionGuard: PermissionGuard
 
   const createMockCommand = (name: string, aliases?: string[]): Command => {
     if (aliases) {
@@ -17,6 +24,8 @@ describe('CommandParser', () => {
         name,
         description: `Comando ${name}`,
         aliases,
+        permission: 'any',
+        scope: 'any_group',
         execute: vi.fn()
       }
     }
@@ -24,12 +33,22 @@ describe('CommandParser', () => {
     return {
       name,
       description: `Comando ${name}`,
+      permission: 'any',
+      scope: 'any_group',
       execute: vi.fn()
     }
   }
 
   beforeEach(() => {
-    parser = new CommandParser('@bot')
+    // Mock do PermissionGuard que sempre permite
+    mockPermissionGuard = {
+      hasPermission: vi.fn().mockResolvedValue(true),
+      isGroupAllowed: vi.fn().mockResolvedValue(true),
+      isAdmin: vi.fn().mockResolvedValue(false),
+      isMember: vi.fn().mockResolvedValue(true)
+    } as any
+
+    parser = new CommandParser('@bot', mockPermissionGuard)
   })
 
   describe('register', () => {
@@ -171,7 +190,7 @@ describe('CommandParser', () => {
     })
 
     it('deve funcionar com prefixo customizado', async () => {
-      const customParser = new CommandParser('!')
+      const customParser = new CommandParser('!', mockPermissionGuard)
       const command = createMockCommand('help')
       customParser.register(command)
 

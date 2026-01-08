@@ -7,6 +7,8 @@ export class FindCharacterCommand implements Command {
   readonly name = 'find'
   readonly description = 'Busca informações de um personagem'
   readonly aliases = ['f', 'buscar', 'char']
+  readonly permission = 'member' as const
+  readonly scope = 'member_group' as const
 
   constructor(
     private useCase: FindCharacterUseCase,
