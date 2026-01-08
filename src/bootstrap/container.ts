@@ -8,8 +8,8 @@ import { BaileysClient } from '../infra/whatsapp/BaileysClient.js'
 import { SupabaseCharacterRepository } from '../infra/database/SupabaseCharacterRepository.js'
 import { SupabaseDeathRepository } from '../infra/database/SupabaseDeathRepository.js'
 import { SupabaseHuntedRepository } from '../infra/database/SupabaseHuntedRepository.js'
-// import { RubinotDeathScraper } from '../infra/scraper/RubinotDeathScraper.js'
-// import { RubinotGuildScraper } from '../infra/scraper/RubinotGuildScraper.js'
+import { SupabaseBotUserRepository } from '../infra/database/SupabaseBotUserRepository.js'
+import { SupabaseBotGroupRepository } from '../infra/database/SupabaseBotGroupRepository.js'
 import { FindCharacterUseCase } from '../app/usecases/FindCharacterUseCase.js'
 import { RubinotDeathScraperV2 } from '../infra/scraper/RubinotDeathScraperV2.js'
 import { RubinotGuildScraperV2 } from '../infra/scraper/RubinotGuildScraperV2.js'
@@ -70,15 +70,20 @@ class Container {
       () => new SupabaseHuntedRepository()
     );
   }
-  /*
-@deprecated
-  get deathScraper(): RubinotDeathScraper {
-    return this.getOrCreate('deathScraper', () => new RubinotDeathScraper())
+
+  get botUserRepository(): SupabaseBotUserRepository {
+    return this.getOrCreate(
+      "botUserRepository",
+      () => new SupabaseBotUserRepository()
+    );
   }
 
-  get guildScraper(): RubinotGuildScraper {
-    return this.getOrCreate('guildScraper', () => new RubinotGuildScraper())
-  }*/
+  get botGroupRepository(): SupabaseBotGroupRepository {
+    return this.getOrCreate(
+      "botGroupRepository",
+      () => new SupabaseBotGroupRepository()
+    );
+  }
  
   get deathScraper(): RubinotDeathScraperV2 {
     return this.getOrCreate("deathScraper", () => new RubinotDeathScraperV2());

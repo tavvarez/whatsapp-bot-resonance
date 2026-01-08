@@ -22,8 +22,8 @@ async function main() {
     // 2. Configura comandos
     const parser = setupCommands()
 
-    // 3. Configura bot e listener
-    const listener = setupBot(parser)
+    // 3. Configura bot e listener (carrega cache de grupos)
+    const listener = await setupBot(parser)
 
     // 4. Inicia jobs agendados
     await startScheduledJobs()
