@@ -25,8 +25,16 @@ Bot de WhatsApp para monitoramento de eventos do jogo Rubinot (Tibia OTS), inclu
 
 ### 💬 Comandos Interativos
 - `@bot help` - Lista todos os comandos disponíveis
-- `@bot add <nome>` - Adiciona personagem ao monitoramento
 - `@bot find <nome>` - Busca informações de um personagem
+- `@bot add <nome> <tipo>` - Adiciona personagem (admin only)
+- `@bot promote <número>` - Promove usuário a admin
+- `@bot users` - Lista usuários do bot
+
+### 🔐 Sistema de Permissões
+- **Controle por Usuário**: Admin e Member roles
+- **Controle por Grupo**: Admin e Member groups
+- **Validação Dupla**: Usuário E grupo devem ter permissão
+- **Auditoria**: Logs de todas as tentativas de acesso
 
 ### 🛡️ Anti-Bot
 - Bypass de Cloudflare com Playwright + Stealth
@@ -172,6 +180,22 @@ PROXY_SERVER=http://usuario:senha@proxy.exemplo.com:8080
 PROXY_SERVER=usuario:senha:proxy.iproyal.com:12321
 ```
 
+## 🔐 Setup de Permissões
+
+### Quick Start (5 minutos)
+
+Leia o guia rápido: **[QUICK_START_PERMISSOES.md](QUICK_START_PERMISSOES.md)**
+
+Resumo:
+1. Popular usuários: `sql/populate_bot_users.sql`
+2. Promover primeiro admin via SQL
+3. Registrar grupos no banco
+4. Atualizar `.env` com IDs dos grupos
+
+### Documentação Completa
+
+Para detalhes técnicos: **[SISTEMA_PERMISSOES.md](SISTEMA_PERMISSOES.md)**
+
 ## 📱 Uso
 
 ### Primeira Execução
@@ -179,20 +203,29 @@ PROXY_SERVER=usuario:senha:proxy.iproyal.com:12321
 1. Execute o bot: `npm start`
 2. Escaneie o QR Code que aparece no terminal
 3. Aguarde a mensagem: `✅ WhatsApp conectado`
-4. O bot está pronto!
+4. Configure permissões (ver seção acima)
+5. O bot está pronto!
 
 ### Comandos Disponíveis
 
-No grupo configurado, envie:
+#### Comandos de Members (scope: member_group)
 
 ```
-@bot help
+@bot help                    # Lista comandos
+@bot find Foxzinho          # Busca personagem
 ```
 
-Comandos disponíveis:
-- `@bot help` - Mostra ajuda
-- `@bot add <nome>` - Adiciona personagem ao monitoramento
-- `@bot find <nome>` - Busca informações do personagem
+#### Comandos de Admin (scope: admin_group)
+
+```
+@bot add Novo Char MAIN     # Adiciona personagem
+@bot users                  # Lista todos os usuários
+@bot users admin            # Lista apenas admins
+@bot promote 5511999999999  # Promove a admin
+@bot demote 5511999999999   # Remove privilégios admin
+```
+
+**Nota:** Comandos admin só funcionam no grupo admin e apenas para usuários admin.
 
 ### Jobs Automáticos
 
