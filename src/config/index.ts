@@ -32,10 +32,17 @@ export const config = {
   },
 
   /**
-   * Configurações do WhatsApp
+   * Configurações do WhatsApp e Grupos
    */
   whatsapp: {
-    groupId: getEnvOrThrow('GROUP_ID'),
+    // Grupo antigo (manter para compatibilidade)
+    groupId: getEnvOrDefault('GROUP_ID', ''),
+    
+    // Novos grupos separados por função
+    memberGroupId: getEnvOrThrow('GROUP_ID_MEMBERS'),
+    adminGroupId: getEnvOrThrow('GROUP_ID_ADMINS'),
+    
+    // Grupos de notificação
     groupIdNotifyDeaths: getEnvOrThrow('GROUP_ID_NOTIFY_DEATHS'),
     groupIdNotifyLevelUps: getEnvOrThrow('GROUP_ID_NOTIFY_LEVELUPS')
   },
