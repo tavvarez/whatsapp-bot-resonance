@@ -15,7 +15,7 @@
       "value": "fb.2.1767032981136.249703969505177204",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1774873625,
+      "expires": 1775656519,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -45,7 +45,7 @@
       "value": "37WyB0x3ECeWPVgU3ANv8eCnVoh",
       "domain": ".tiktok.com",
       "path": "/",
-      "expires": 1800756500.012012,
+      "expires": 1801576519.017603,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
@@ -55,7 +55,7 @@
       "value": "1",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1800756500,
+      "expires": 1801576519,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -65,69 +65,67 @@
       "value": "01KDNNZ27891KSV5YRJADGQ85M_.tt.2",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1800756500,
+      "expires": 1801576519,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "IDE",
-      "value": "AHWqTUlYLSIagT-a4NVuy4tVThsTJn7T3OdQjHNZgvnDxfdDhaAqTAgML_up3dQH",
+      "value": "AHWqTUmjPjgf6odew-zDbcdEmqoCXqO_MpebbrJ63dymhVOL4d2mVh7jtwbqYyQe",
       "domain": ".doubleclick.net",
       "path": "/",
-      "expires": 1801601525.196839,
+      "expires": 1802293470.168869,
       "httpOnly": true,
       "secure": true,
       "sameSite": "None"
     },
     {
-      "name": "ttcsid_D2RH9SBC77UEK08KPNIG",
-      "value": "1767056246417::F2a-AWgrOkyKcx3EqGxw.4.1767060500579.1",
-      "domain": ".rubinot.com.br",
-      "path": "/",
-      "expires": 1800756500,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
-      "name": "ttcsid",
-      "value": "1767056246418::1XwWXcjGpbH7O3wHge9V.4.1767060500579.0",
-      "domain": ".rubinot.com.br",
-      "path": "/",
-      "expires": 1800756500,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
-      "name": "cf_chl_rc_ni",
-      "value": "1",
+      "name": "_ga_JD5ND9M441",
+      "value": "deleted",
       "domain": "rubinot.com.br",
       "path": "/",
-      "expires": 1767101221,
+      "expires": 1802403442.121946,
       "httpOnly": false,
-      "secure": true,
-      "sameSite": "None",
-      "partitionKey": "https://rubinot.com.br",
-      "_crHasCrossSiteAncestor": false
+      "secure": false,
+      "sameSite": "Lax"
     },
     {
       "name": "_rdt_uuid",
       "value": "1767032981153.588fe42a-4c53-4557-a8b4-11229c6f969e",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1774873624,
+      "expires": 1775656519,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Strict"
     },
     {
       "name": "_ga_JD5ND9M441",
-      "value": "GS2.1.s1767097625$o5$g0$t1767097625$j60$l0$h1268527387",
+      "value": "GS2.1.s1767814461$o8$g1$t1767880519$j59$l0$h504265773$dv_xMrRhO0_SpGC9spufDR5FcXT62gGeXOg",
       "domain": ".rubinot.com.br",
       "path": "/",
-      "expires": 1801657625.241373,
+      "expires": 1802440519.353552,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "ttcsid",
+      "value": "1767814462126::7iaD3Vjc5wSSsq1pfJpe.7.1767880519373.0",
+      "domain": ".rubinot.com.br",
+      "path": "/",
+      "expires": 1801576519,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "ttcsid_D2RH9SBC77UEK08KPNIG",
+      "value": "1767814462125::X_t2PE5HBniU91Nimnob.7.1767880519373.1",
+      "domain": ".rubinot.com.br",
+      "path": "/",
+      "expires": 1801576519,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -147,7 +145,7 @@
         },
         {
           "name": "lastExternalReferrerTime",
-          "value": "1767058915777"
+          "value": "1767880519084"
         },
         {
           "name": "menus",
@@ -155,7 +153,7 @@
         },
         {
           "name": "topicsLastReferenceTime",
-          "value": "1767097625106"
+          "value": "1767880519096"
         }
       ]
     },
