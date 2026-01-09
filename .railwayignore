@@ -1,0 +1,37 @@
+# Arquivos que não devem ir para o Railway
+
+# Node modules (será reinstalado)
+node_modules/
+
+# Arquivos de desenvolvimento
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de teste
+test-api.sh
+*.test.ts
+*.spec.ts
+
+# Auth do WhatsApp (será gerado no Railway)
+auth/
+
+# Variáveis de ambiente locais
+.env.local
+.env.development
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentação de desenvolvimento
+API_IMPLEMENTATION_STATUS.md
+QUICK_START_API.md
+FIX_LISTENER_GUIDE.md
