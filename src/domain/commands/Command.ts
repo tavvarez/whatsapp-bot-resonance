@@ -7,13 +7,25 @@ export interface CommandContext {
   text: string
   /** ID do chat de onde veio a mensagem */
   chatId: string
-  /** Número do remetente */
+  /** Número do remetente (phone ou LID) */
   sender: string
+  /** Nome do contato (pushName do WhatsApp) */
+  senderName?: string
 }
 
 /**
+ * Nível de permissão necessário para executar um comando
+ */
+export type CommandPermission = 'admin' | 'member' | 'any'
+
+/**
+ * Escopo do grupo onde o comando pode ser executado
+ */
+export type CommandScope = 'admin_group' | 'member_group' | 'any_group'
+
+/**
  * Interface base para todos os comandos do bot.
- * Permite adicionar novos comandos de forma desacoplada.
+ * Permite adicionar novos comandos de forma desacoplada com controle de permissões.
  */
 export interface Command {
   /** Nome do comando (ex: "find", "add", "help") */
@@ -24,6 +36,12 @@ export interface Command {
   
   /** Aliases opcionais (ex: "f" para "find") */
   readonly aliases?: string[]
+  
+  /** Nível de permissão requerido (padrão: 'member') */
+  readonly permission: CommandPermission
+  
+  /** Escopo do grupo onde pode ser usado (padrão: 'any_group') */
+  readonly scope: CommandScope
   
   /** Executa o comando */
   execute(ctx: CommandContext): Promise<void>

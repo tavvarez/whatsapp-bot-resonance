@@ -1,13 +1,15 @@
-import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DeathRepository } from '../../domain/repositories/DeathRepository.js'
 import type { DeathEvent } from '../../domain/entities/DeathEvent.js'
 import { DatabaseError } from '../../shared/errors/index.js'
+import { getSupabaseClient } from './SupabaseClient.js'
 
 export class SupabaseDeathRepository implements DeathRepository {
-  private client = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  private client: SupabaseClient
+
+  constructor() {
+    this.client = getSupabaseClient()
+  }
 
   async existsByHash(hash: string): Promise<boolean> {
     const { data, error } = await this.client

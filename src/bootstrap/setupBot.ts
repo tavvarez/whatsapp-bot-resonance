@@ -6,25 +6,22 @@ import { GroupGuard } from '../app/bot/GroupGuard.js'
 import { MessageListener } from '../app/bot/MessageListener.js'
 import type { CommandParser } from '../app/commands/CommandParser.js'
 import { container } from './container.js'
-import { config } from '../config/index.js'
-import { log } from '../shared/utils/logger.js'
+import { logger } from '../shared/utils/logger.js'
 
 /**
  * Configura o listener de mensagens do bot.
  */
-export function setupBot(parser: CommandParser): MessageListener {
-  const { whatsapp } = container
+export async function setupBot(parser: CommandParser): Promise<MessageListener> {
+  const { whatsapp, botGroupRepository } = container
 
-  const guard = new GroupGuard(config.whatsapp.groupId)
+  // Usa o repositório para validar grupos dinamicamente
+  const guard = new GroupGuard(botGroupRepository)
+  
+  // Força refresh do cache na inicialização
+  await guard.forceRefresh()
+  logger.info('✅ Cache de grupos inicializado')
+  
   const listener = new MessageListener(whatsapp, guard, parser)
-
-  // Debug: mostra ID dos grupos
-  whatsapp.onMessage((msg) => {
-    const jid = msg.key.remoteJid
-    if (jid?.endsWith('@g.us')) {
-      log(`📌 GROUP ID: ${jid}`)
-    }
-  })
 
   return listener
 }
@@ -35,6 +32,6 @@ export function setupBot(parser: CommandParser): MessageListener {
 export async function connectWhatsApp(): Promise<void> {
   const { whatsapp } = container
   await whatsapp.connect()
-  log('✅ WhatsApp conectado')
+  logger.success('✅ WhatsApp conectado')
 }
 

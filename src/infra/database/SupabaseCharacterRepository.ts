@@ -1,14 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CharacterRepository, CreateCharacterInput } from '../../domain/repositories/CharacterRepository.js'
 import type { Character } from '../../domain/entities/Character.js'
 import { DatabaseError } from '../../shared/errors/index.js'
 import { normalizeText } from '../../shared/utils/normalizeText.js'
+import { getSupabaseClient } from './SupabaseClient.js'
 
 export class SupabaseCharacterRepository implements CharacterRepository {
-  private client = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  private client: SupabaseClient
+
+  constructor() {
+    this.client = getSupabaseClient()
+  }
 
   async findByNormalizedName(normalizedName: string): Promise<Character | null> {
     const { data, error } = await this.client
