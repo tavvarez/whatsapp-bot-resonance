@@ -11,6 +11,10 @@ import { PromoteUserCommand } from '../app/commands/PromoteUserCommand.js'
 import { DemoteUserCommand } from '../app/commands/DemoteUserCommand.js'
 import { ListUsersCommand } from '../app/commands/ListUsersCommand.js'
 import { RegisterCommand } from '../app/commands/RegisterCommand.js'
+import { AddHuntedGuildCommand } from '../app/commands/AddHuntedGuildCommand.js'
+import { RemoveHuntedGuildCommand } from '../app/commands/RemoveHuntedGuildCommand.js'
+import { ListHuntedGuildsCommand } from '../app/commands/ListHuntedGuildsCommand.js'
+import { ListWorldsCommand } from '../app/commands/ListWorldsCommand.js'
 import { container } from './container.js'
 
 /**
@@ -22,7 +26,10 @@ export function setupCommands(): CommandParser {
     characterRepository,
     findCharacterUseCase,
     botUserRepository,
-    botGroupRepository
+    botGroupRepository,
+    gameServerRepository,
+    gameWorldRepository,
+    huntedGuildRepository
   } = container
 
   // Cria o guard de permissões
@@ -50,6 +57,32 @@ export function setupCommands(): CommandParser {
   const promoteCommand = new PromoteUserCommand(botUserRepository, whatsapp)
   const demoteCommand = new DemoteUserCommand(botUserRepository, whatsapp)
   const listUsersCommand = new ListUsersCommand(botUserRepository, whatsapp)
+  
+  // Comandos de hunted guilds (multi-tenancy)
+  const addHuntedCommand = new AddHuntedGuildCommand(
+    huntedGuildRepository,
+    gameServerRepository,
+    gameWorldRepository,
+    botGroupRepository,
+    whatsapp
+  )
+  const removeHuntedCommand = new RemoveHuntedGuildCommand(
+    huntedGuildRepository,
+    botGroupRepository,
+    whatsapp
+  )
+  const listHuntedCommand = new ListHuntedGuildsCommand(
+    huntedGuildRepository,
+    gameWorldRepository,
+    gameServerRepository,
+    botGroupRepository,
+    whatsapp
+  )
+  const listWorldsCommand = new ListWorldsCommand(
+    gameServerRepository,
+    gameWorldRepository,
+    whatsapp
+  )
 
   // Registra todos os comandos
   parser.registerAll(
@@ -62,7 +95,12 @@ export function setupCommands(): CommandParser {
     addCommand,
     promoteCommand,
     demoteCommand,
-    listUsersCommand
+    listUsersCommand,
+    // Multi-tenancy (hunted guilds)
+    addHuntedCommand,
+    removeHuntedCommand,
+    listHuntedCommand,
+    listWorldsCommand
   )
 
   return parser
