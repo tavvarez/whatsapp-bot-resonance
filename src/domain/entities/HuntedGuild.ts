@@ -29,8 +29,8 @@ export interface CreateHuntedGuildInput {
   botGroupId: string
   worldId: string
   guildName: string
-  notifyDeaths?: boolean
-  notifyLevelUps?: boolean
-  minLevelNotify?: number
-  createdBy?: string
+  notifyDeaths?: boolean | undefined
+  notifyLevelUps?: boolean | undefined
+  minLevelNotify?: number | undefined
+  createdBy?: string | undefined
 }
