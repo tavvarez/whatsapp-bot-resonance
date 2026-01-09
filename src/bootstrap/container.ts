@@ -10,6 +10,9 @@ import { SupabaseDeathRepository } from '../infra/database/SupabaseDeathReposito
 import { SupabaseHuntedRepository } from '../infra/database/SupabaseHuntedRepository.js'
 import { SupabaseBotUserRepository } from '../infra/database/SupabaseBotUserRepository.js'
 import { SupabaseBotGroupRepository } from '../infra/database/SupabaseBotGroupRepository.js'
+import { SupabaseGameServerRepository } from '../infra/database/SupabaseGameServerRepository.js'
+import { SupabaseGameWorldRepository } from '../infra/database/SupabaseGameWorldRepository.js'
+import { SupabaseHuntedGuildRepository } from '../infra/database/SupabaseHuntedGuildRepository.js'
 import { FindCharacterUseCase } from '../app/usecases/FindCharacterUseCase.js'
 import { RubinotDeathScraperV2 } from '../infra/scraper/RubinotDeathScraperV2.js'
 import { RubinotGuildScraperV2 } from '../infra/scraper/RubinotGuildScraperV2.js'
@@ -82,6 +85,27 @@ class Container {
     return this.getOrCreate(
       "botGroupRepository",
       () => new SupabaseBotGroupRepository()
+    );
+  }
+
+  get gameServerRepository(): SupabaseGameServerRepository {
+    return this.getOrCreate(
+      "gameServerRepository",
+      () => new SupabaseGameServerRepository()
+    );
+  }
+
+  get gameWorldRepository(): SupabaseGameWorldRepository {
+    return this.getOrCreate(
+      "gameWorldRepository",
+      () => new SupabaseGameWorldRepository()
+    );
+  }
+
+  get huntedGuildRepository(): SupabaseHuntedGuildRepository {
+    return this.getOrCreate(
+      "huntedGuildRepository",
+      () => new SupabaseHuntedGuildRepository()
     );
   }
  

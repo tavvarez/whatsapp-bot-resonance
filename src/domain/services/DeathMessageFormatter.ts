@@ -34,7 +34,7 @@ export class DeathMessageFormatter {
       const byMatch = event.rawText.match(/died at level \d+ (.+)/)
       const deathCause = byMatch?.[1]?.trim() ?? ''
 
-      return ` ${time} — *${event.playerName}* died at level (${event.level}) ${deathCause}`
+      return ` ${time} — *${event.playerName}* died at level (*${event.level}*) ${deathCause}`
     })
 
     return header + lines.join('\n')

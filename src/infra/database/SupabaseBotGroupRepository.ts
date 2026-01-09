@@ -95,6 +95,12 @@ export class SupabaseBotGroupRepository implements BotGroupRepository {
     if (data.description) {
       entity.description = data.description
     }
+    if (data.tenant_id) {
+      entity.tenantId = data.tenant_id
+    }
+    if (data.tenant_name) {
+      entity.tenantName = data.tenant_name
+    }
     if (data.created_at) {
       entity.createdAt = new Date(data.created_at)
     }
